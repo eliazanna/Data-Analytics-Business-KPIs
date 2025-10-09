@@ -318,12 +318,14 @@ def inventario_aggregato(df_prodotti, df_vendite):
 import requests
 
 def send_telegram_message(text):
-    """Invia una notifica Telegram tramite BotFather"""
+    """Invia una notifica Telegram"""
     try:
         bot_token = st.secrets["telegram"]["bot_token"]
         chat_id = st.secrets["telegram"]["chat_id"]
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
-        requests.post(url, data=payload)
+        r = requests.post(url, data=payload)
+        if not r.ok:
+            print("Errore Telegram:", r.text)
     except Exception as e:
         print("Errore Telegram:", e)
