@@ -23,8 +23,6 @@ tab1, tab2, tab3, tab4 = st.tabs(["📦 Inventario", "🧾 Vendite", "💰 Bilan
 from data_utils import inventario_aggregato
 
 with tab1:
-    st.write("Token trovato:", st.secrets["telegram"]["bot_token"][:10] + "...")
-    st.write("Chat ID:", st.secrets["telegram"]["chat_id"])
     st.subheader("📦 Inventario reale aggregato")
 
     prodotti_df = get_data(prodotti_ws)
