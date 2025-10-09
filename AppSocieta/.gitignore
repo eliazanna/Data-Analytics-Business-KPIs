@@ -1,0 +1,12 @@
+# --- File sensibili ---
+creds.json
+.streamlit/secrets.toml
+
+# --- File temporanei / cache ---
+__pycache__/
+*.pyc
+.DS_Store
+
+# --- File IDE/editor ---
+.vscode/
+.idea/
