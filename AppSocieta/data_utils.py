@@ -1,6 +1,6 @@
 import pandas as pd
 import re
-
+import requests
 
 # ---------------------------------------------------
 # 🧹 Pulizia prezzi
@@ -315,17 +315,25 @@ def inventario_aggregato(df_prodotti, df_vendite):
     grouped = grouped.rename(columns={"Nome": "Prodotto"})
     return grouped
 
-import requests
 
 def send_telegram_message(text):
-    """Invia una notifica Telegram"""
+    """Invia una notifica Telegram usando i secrets di Streamlit"""
     try:
         bot_token = st.secrets["telegram"]["bot_token"]
         chat_id = st.secrets["telegram"]["chat_id"]
+
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
-        r = requests.post(url, data=payload)
-        if not r.ok:
-            print("Errore Telegram:", r.text)
+        payload = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML"
+        }
+
+        response = requests.post(url, data=payload, timeout=10)
+        if response.status_code != 200:
+            st.warning(f"⚠️ Telegram error: {response.text}")
+        else:
+            print("✅ Messaggio Telegram inviato con successo!")
     except Exception as e:
-        print("Errore Telegram:", e)
+        st.error(f"Errore Telegram: {e}")
+
