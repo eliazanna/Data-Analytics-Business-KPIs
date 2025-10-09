@@ -16,7 +16,8 @@ st.title("💼 Gestione Società - Elia & Tommy")
 st.caption("Dashboard condivisa per gestire spese, vendite e saldi in tempo reale")
 
 tab1, tab2, tab3, tab4 = st.tabs(["📦 Inventario", "🧾 Vendite", "💰 Bilancio", "📈 King della Vendita"])
-
+st.write("Token trovato:", st.secrets["telegram"]["bot_token"][:10] + "...")
+st.write("Chat ID:", st.secrets["telegram"]["chat_id"])
 # -------------------------------
 # 📦 TAB 1: INVENTARIO
 # -------------------------------
@@ -177,5 +178,3 @@ with tab4:
             data=analisi.set_index("Venditore")[["Plusvalenza media (%)"]],
             use_container_width=True
         )
-st.write("Token trovato:", st.secrets["telegram"]["bot_token"][:10] + "...")
-st.write("Chat ID:", st.secrets["telegram"]["chat_id"])
