@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 import requests
-import streamlit
+import streamlit as st   
 # ---------------------------------------------------
 # 🧹 Pulizia prezzi
 # ---------------------------------------------------
@@ -333,6 +333,5 @@ def send_telegram_message(text):
             print("✅ Messaggio Telegram inviato con successo!")
     except Exception as e:
         print("❌ Errore Telegram:", e)
-
         
 
