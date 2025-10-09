@@ -323,17 +323,14 @@ def send_telegram_message(text):
         chat_id = st.secrets["telegram"]["chat_id"]
 
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload = {
-            "chat_id": chat_id,
-            "text": text,
-            "parse_mode": "HTML"
-        }
+        payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
 
         response = requests.post(url, data=payload, timeout=10)
+
         if response.status_code != 200:
-            st.warning(f"⚠️ Telegram error: {response.text}")
+            print("⚠️ Telegram error:", response.text)
         else:
             print("✅ Messaggio Telegram inviato con successo!")
     except Exception as e:
-        st.error(f"Errore Telegram: {e}")
+        print("❌ Errore Telegram:", e)
 
