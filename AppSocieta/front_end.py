@@ -177,3 +177,5 @@ with tab4:
             data=analisi.set_index("Venditore")[["Plusvalenza media (%)"]],
             use_container_width=True
         )
+st.write("Token trovato:", st.secrets["telegram"]["bot_token"][:10] + "...")
+st.write("Chat ID:", st.secrets["telegram"]["chat_id"])

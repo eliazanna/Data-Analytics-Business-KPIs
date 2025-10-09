@@ -334,3 +334,6 @@ def send_telegram_message(text):
     except Exception as e:
         print("❌ Errore Telegram:", e)
 
+st.write("Token trovato:", st.secrets["telegram"]["bot_token"][:10] + "...")
+st.write("Chat ID:", st.secrets["telegram"]["chat_id"])
+
