@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "gestionesocietaapp",
+  "private_key_id": "c508b0e1f263da166d8b8e2d7c7136bc72fb14c1",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCju0tKUHXq3ura\nY/LzcyaHQH0rZqRBaQy7vFucNRjL3nsEuIjuf9sbtJEMvtvPDtDCNXIkb8s9orIb\nnw+Di1kwIokt8lPz6Nfth+WX6XGyNTFuGnk428WECjUjR5mjHXg073L0ltS4MM0t\nrEaMf4M+KLJQvoLvTMyUKsc5tZumXkHVLSv6lN0frgEatxnLtpqYcigdUu2y/3v6\nK7XI8MqpASHWqTepI3I4RyeKCQ37CEFf4VTm2WIuLi7u3yyGIT1ZQQXIqY9DMjE/\nL146kbT9bXMJMQxHcohEZjN2nRxVA2sx0wlQ35xZ3K7Y6OmeD/Y8c7TL0+MV9fYU\nW5vaMLN/AgMBAAECggEAQvWr2t6A+ubjgSDzEOD81r9m8ULu1dlSXcywYnfMhkOc\nZ9fYGEGtp+z2jRHY7xsOAP6+iWw24CQTVvx76b4pYWgeVe4Oq2eENx4mpTPRTaI3\nbuHgxYILiu5pwN3dVToOGQf8KU8t+43pu04DJB5Z3CfklOT0w0zTNZ0xEMbWuviV\nPPccungK/P4a22NWX7toEpdbwSL2DtI0Gx1Vp6vVgTgBI9HsTiIyj7qS5I9EWjJf\n61o+uI8fF3wX65iKZzWPd21D3sH1/tBte6o7Tt7iiciv4k7aMLPKZ+oFzj1dCBzT\noKuqDjV1tkEjmqkIGc9pxPhQU969I0yk2qwGzeYmcQKBgQDfEcFtpHf9yMkD6ZM8\n+z4I5hWdCH8Jj3IpPNtwxG2m+vRax3Bgmxs+cZBbpJc1OQAlXIVFXs/5dUWuaAN9\nRjZgPyDm4iD9/f49JbMw0YTOFOfUM2OLuCM/Ow9bagrINu3li8l0AXLo92iRD6f0\npoaE9Es4zeiGc4sJhn/uUAowmwKBgQC75wtyrFYq65nvQGbNSt3Hah6DKv/fxC/m\nghSQsb5d4HexpYimwwJyEm19+7LACzB9/srbkDvEnwzrDGJSqNnROsjiP4Rgb345\nLOCcp++QumBag1201HtnG4VwX9SkaaNTlZPOVYXq4bXBe2v9Io/FBqcp0/CWIl87\nQ+bbsX5c7QKBgEJmUqGEd4M/pTZY7M8WKl0TwBNCWC5MWLsVtmxWzB0MTnhHLZhU\nE0P/Ie1ljOz2zqhQZgtEMbwbwGYt5/v+TmlP4UdYwGFanbct5az+cP23E1sDAPqy\nESvdNLENW7BFSYMunQS++amHG8UyV9hnSVuCLHH4OOLsudJYCvSxNpdJAoGAOk8D\nNW2XO7Bqz1yryg7ubYBXwZppVpX5y00YdqJBkb4jRoQ4uI8RRjbDtXGS0ZdnT+Hu\nL149vdEhYBsys7XkCdJ1HghZ2tceUz3C4boXVFERr2TOglvhg2h96xZB1VdWsIxd\nFo1hhjbOgSD8rMu504kx/H/hS6WU6b4zeH9G2C0CgYAmto6kOh7l0ReN3A/7PY75\nekiwn9YYoMFz6pEeDghhhehApW0aUWhNWtxY2xp80gr1s0u27bL3dRwuSY/UI4kA\nztEoDsRgaYa7uarSDyn4Rwlm3bQB5IIDgcQPik803wxuB16SnzJ4EwF+vHpufqAI\n1n+CIbbDr1gLCRn+EAfj8A==\n-----END PRIVATE KEY-----\n",
+  "client_email": "streamlit-sheets@gestionesocietaapp.iam.gserviceaccount.com",
+  "client_id": "110028270946324001911",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/streamlit-sheets%40gestionesocietaapp.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
