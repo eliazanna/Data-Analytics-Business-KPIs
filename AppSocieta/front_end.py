@@ -87,8 +87,14 @@ with tab2:
             # 🔔 Invia notifica Telegram
             from data_utils import registra_vendita_multipla, send_telegram_message
             prodotti_str = ", ".join(prodotti_scelti)
-            msg = f"💸 <b>Nuova vendita registrata!</b>\n👤 Venditore: {venditore}\n🛍️ Prodotti: {prodotti_str}\n💶 Totale: € {prezzo_totale:.2f}"
+            msg = (
+                f"💸 <b>Nuova vendita registrata!</b>\n"
+                f"👤 Venditore: {venditore}\n"
+                f"🛍️ Prodotti: {prodotti_str}\n"
+                f"💶 Totale: € {prezzo_totale:.2f}"
+            )
             send_telegram_message(msg)
+
 
             
             st.success(f"✅ Vendita registrata ({len(vendite_generate)} prodotti)")
