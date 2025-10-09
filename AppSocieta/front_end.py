@@ -59,32 +59,33 @@ with tab1:
 # -------------------------------
 from data_utils import registra_vendita_multipla
 
-st.subheader("🧾 Registra vendita multipla")
+with tab2:
+    st.subheader("🧾 Registra vendita multipla")
 
-prodotti_df = get_data(prodotti_ws)
-nomi_prodotti = sorted(prodotti_df["Nome"].unique().tolist())
+    prodotti_df = get_data(prodotti_ws)
+    nomi_prodotti = sorted(prodotti_df["Nome"].unique().tolist())
 
-# Selezione multipla
-prodotti_scelti = st.multiselect("Prodotti venduti", nomi_prodotti)
-venditore = st.selectbox("Venditore", ["Elia", "Tommy"])
-prezzo_totale = st.number_input("Prezzo totale vendita (€)", min_value=0.0, step=0.5)
+    # Selezione multipla
+    prodotti_scelti = st.multiselect("Prodotti venduti", nomi_prodotti)
+    venditore = st.selectbox("Venditore", ["Elia", "Tommy"])
+    prezzo_totale = st.number_input("Prezzo totale vendita (€)", min_value=0.0, step=0.5)
 
-quantita_vendute = {}
-for p in prodotti_scelti:
-    quantita_vendute[p] = st.number_input(f"Quantità per {p}", min_value=1, step=1, key=p)
+    quantita_vendute = {}
+    for p in prodotti_scelti:
+        quantita_vendute[p] = st.number_input(f"Quantità per {p}", min_value=1, step=1, key=p)
 
-if st.button("Registra vendita multipla", type="primary"):
-    if prodotti_scelti and prezzo_totale > 0:
-        vendite_generate, inventario_aggiornato = registra_vendita_multipla(
-            prodotti_df, quantita_vendute, prezzo_totale, venditore
-        )
-        # scrive su Google Sheet
-        for v in vendite_generate:
-            add_row(vendite_ws, v)
-        st.success(f"✅ Vendita registrata ({len(vendite_generate)} prodotti)")
-        st.rerun()
-    else:
-        st.warning("⚠️ Seleziona almeno un prodotto e inserisci un prezzo totale.")
+    if st.button("Registra vendita multipla", type="primary"):
+        if prodotti_scelti and prezzo_totale > 0:
+            vendite_generate, inventario_aggiornato = registra_vendita_multipla(
+                prodotti_df, quantita_vendute, prezzo_totale, venditore
+            )
+            # scrive su Google Sheet
+            for v in vendite_generate:
+                add_row(vendite_ws, v)
+            st.success(f"✅ Vendita registrata ({len(vendite_generate)} prodotti)")
+            st.rerun()
+        else:
+            st.warning("⚠️ Seleziona almeno un prodotto e inserisci un prezzo totale.")
 
 
 # -------------------------------
