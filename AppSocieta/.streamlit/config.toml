@@ -1,7 +1,7 @@
 [theme]
-base = "dark"
-primaryColor = "#D4AF7F"
-backgroundColor = "#2A2E35"
-secondaryBackgroundColor = "#3D4551"
-textColor = "#ECE8DB"
+base = "light"
+primaryColor = "#007A87"             # Blu petrolio per pulsanti/link
+backgroundColor = "#EAF4F4"          # Bianco con tono azzurro
+secondaryBackgroundColor = "#FFFFFF" # Box e card
+textColor = "#1E272E"                # Testo grigio-nero profondo
 font = "sans serif"
