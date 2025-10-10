@@ -6,29 +6,29 @@ import streamlit_authenticator as stauth
 
 
 
-
 # --- CREDENZIALI ---
-usernames = ["Elia", "Tommy"]
 names = ["Elia Zanini", "Tommy Rossi"]
+usernames = ["elia", "tommy"]
 passwords = [
-    st.secrets.get("auth", {}).get("elia_password", "placeholder_elia"),
-    st.secrets.get("auth", {}).get("tommy_password", "placeholder_tommy")
+    str(st.secrets.get("elia_password", "sonoilre")),
+    str(st.secrets.get("tommy_password", "sonounservofedele"))
 ]
-st.write("DEBUG - Passwords list:", passwords)
-st.write("DEBUG - Types:", [type(p) for p in passwords])
+
 hashed_passwords = stauth.Hasher(passwords).generate()
 
-# --- LOGIN CONFIG ---
+credentials = {
+    "usernames": {
+        "elia": {"name": names[0], "password": hashed_passwords[0]},
+        "tommy": {"name": names[1], "password": hashed_passwords[1]}
+    }
+}
+
 authenticator = stauth.Authenticate(
-    {
-        "Elia": {"name": names[0], "password": hashed_passwords[0]},
-        "Tommy": {"name": names[1], "password": hashed_passwords[1]}
-    },
+    credentials,
     "cookie_societa",
     "firma_cookie123",
     cookie_expiry_days=30
 )
-
 # --- LOGIN ---
 name, authentication_status, username = authenticator.login("Login", "main")
 
