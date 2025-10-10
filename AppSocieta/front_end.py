@@ -287,9 +287,9 @@ if authentication_status:
         # Filtra per oggi e settimana
         vendite_giornaliere = vendite_df[vendite_df["Timestamp"].dt.date == oggi]
         vendite_settimanali = vendite_df[
-            (vendite_df["Timestamp"].dt.date >= settimana_inizio) & (vendite_df["Timestamp"].dt.date <= oggi)
-        ]
-
+    (vendite_df["Timestamp"].dt.date >= settimana_inizio)
+    & (vendite_df["Timestamp"].dt.date <= oggi)
+]
         totale_giorno = vendite_giornaliere["Prezzo_totale_vendita"].sum()
         totale_settimana = vendite_settimanali["Prezzo_totale_vendita"].sum()
 
