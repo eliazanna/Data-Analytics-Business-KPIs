@@ -184,25 +184,45 @@ if authentication_status:
 
         # Countdown al pareggio
         st.divider()
-        st.metric("🎯 Mancano al pareggio", f"€ {b['pareggio']:.2f}")
-        # --- PROGRESS BAR VERSO IL PAREGGIO ---
+        # --- BILANCIO GLOBALE E AVANZAMENTO ---
         totale_spese = b["totale_spese"]
         totale_entrate = b["totale_entrate"]
+        pareggio = b["pareggio"]
+        guadagno_netto = totale_entrate - totale_spese
 
-        # Evita divisioni per zero
         if totale_spese > 0:
             progresso = min(totale_entrate / totale_spese, 1.0)
         else:
             progresso = 0
 
-        # Testo dinamico in base al progresso
-        if progresso < 1:
-            st.markdown(f"### 📊 Avanzamento verso il pareggio: **{progresso*100:.1f}%**")
+        # --- Sezione dinamica ---
+        if totale_entrate < totale_spese:
+            # Mancano al pareggio
+            st.markdown("### 🎯 Mancano al pareggio")
+            st.metric("Importo mancante", f"€ {pareggio:.2f}")
             st.progress(progresso)
-        else:
-            st.markdown("### 🥳 Pareggio raggiunto!")
+            st.markdown(f"**Avanzamento:** {progresso*100:.1f}% delle spese coperte")
+        elif abs(totale_entrate - totale_spese) < 1:
+            # Pareggio preciso
+            st.markdown("### ✅ Pareggio raggiunto!")
+            st.progress(1.0)
             st.balloons()
-
+        else:
+            # PROFITTO 🤑
+            st.markdown("""
+                <div style="
+                    background-color: #E8F5E9;
+                    padding: 1rem;
+                    border-radius: 10px;
+                    border: 1px solid #C8E6C9;
+                    text-align: center;">
+                    <h3 style="color:#1B5E20;">💰 Guadagno netto</h3>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            st.metric("Profitto totale", f"€ {guadagno_netto:.2f}")
+            st.progress(1.0)
+            st.markdown("Hai superato il pareggio e stai generando **profitto netto!** 🥳")
 
     # -------------------------------
     # 📈 TAB 4: KING DELLA VENDITA
