@@ -1,6 +1,6 @@
 import streamlit as st
 from app import prodotti_ws, vendite_ws
-from data_utils import get_data, add_row, calcola_bilancio, aggiorna_inventario
+from data_utils import registra_vendita_multipla, analisi_vendite, get_data, add_row, calcola_bilancio, aggiorna_inventario
 import pandas as pd
 import streamlit_authenticator as stauth
 
@@ -33,7 +33,7 @@ authenticator = stauth.Authenticate(
     "firma_cookie123",
     cookie_expiry_days=30
 )
-# --- LOGIN ---
+
 # --- LOGIN ---
 name, authentication_status, username = authenticator.login("Login", "sidebar")
 if authentication_status:
@@ -46,14 +46,22 @@ if authentication_status:
     st.caption("Dashboard condivisa per gestire spese, vendite e saldi in tempo reale")
 
 
-    tab1, tab2, tab3, tab4 = st.tabs(["📦 Inventario", "🧾 Vendite", "💰 Bilancio", "📈 King della Vendita"])
+    # --- MENU LATERALE ---
+    st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2550/2550266.png", width=80)
+    st.sidebar.markdown("## 💼 Gestione Società")
+
+    menu = st.sidebar.selectbox(
+        "Navigazione:",
+        ["📦 Inventario", "🧾 Vendite", "💰 Bilancio", "📈 King della Vendita"]
+    )
+
 
     # -------------------------------
     # 📦 TAB 1: INVENTARIO
     # -------------------------------
     from data_utils import inventario_aggregato
 
-    with tab1:
+    if menu== "📦 Inventario"
         st.subheader("📦 Inventario reale aggregato")
 
         prodotti_df = get_data(prodotti_ws)
@@ -101,9 +109,8 @@ if authentication_status:
     # -------------------------------
     # 🧾 TAB 2: VENDITE
     # -------------------------------
-    from data_utils import registra_vendita_multipla
-
-    with tab2:
+    
+    elif menu == "🧾 Vendite":
         st.subheader("🧾 Registra nuovo ordine")
 
         prodotti_df = get_data(prodotti_ws)
@@ -150,7 +157,7 @@ if authentication_status:
     # -------------------------------
     # 💰 TAB 3: BILANCIO
     # -------------------------------
-    with tab3:
+    elif menu=="💰 Bilancio":
         st.subheader("💰 Bilancio 50/50")
 
         prodotti_df = get_data(prodotti_ws)
@@ -246,9 +253,9 @@ if authentication_status:
     # -------------------------------
     # 📈 TAB 4: KING DELLA VENDITA
     # -------------------------------
-    from data_utils import analisi_vendite
 
-    with tab4:
+
+    elif menu == "📈 King della Vendita":
         st.subheader("📈 King della Vendita")
 
         prodotti_df = get_data(prodotti_ws)
