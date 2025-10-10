@@ -45,10 +45,7 @@ if authentication_status:
     st.title("💼 Gestione Società - Elia & Tommy")
     st.caption("Dashboard condivisa per gestire spese, vendite e saldi in tempo reale")
 
-    page = st.sidebar.radio(
-        "📑 Menu",
-        ["Inventario", "Vendite", "Bilancio", "King della Vendita"]
-    )
+
     tab1, tab2, tab3, tab4 = st.tabs(["📦 Inventario", "🧾 Vendite", "💰 Bilancio", "📈 King della Vendita"])
 
     # -------------------------------
@@ -88,7 +85,12 @@ if authentication_status:
                     # 👆 converte in formato europeo (4.5 -> "€ 4,50")
 
                     # Aggiungi la riga a Google Sheets
-                    add_row(prodotti_ws, [nome, prezzo_format, quantita, comprato_da])
+                    from datetime import datetime
+
+                    # Aggiungi la data/ora locale formattata
+                    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    add_row(vendite_ws, [vendita_nome, vendita_qta, prezzo_vendita, venditore, timestamp])
+
 
                     st.success(f"✅ Prodotto **{nome}** aggiunto correttamente con prezzo {prezzo_format}!")
                     st.rerun()

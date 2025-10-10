@@ -1,7 +1,8 @@
 import pandas as pd
 import re
 import requests
-import streamlit as st   
+import streamlit as st  
+from datetime import datetime 
 # ---------------------------------------------------
 # 🧹 Pulizia prezzi
 # ---------------------------------------------------
@@ -182,11 +183,13 @@ def registra_vendita_multipla(df_prodotti, vendita_dict, prezzo_totale, venditor
         quota_ricavo = (costo_tot / costo_totale) * prezzo_totale
         prezzo_unit_vendita = round(quota_ricavo / qta, 2)
 
+        timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
         vendite_generate.append([
             nome,
             qta,
             round(quota_ricavo, 2),
-            venditore
+            venditore,
+            timestamp
         ])
 
         # Aggiorna inventario
