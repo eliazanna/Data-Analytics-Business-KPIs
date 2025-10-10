@@ -258,20 +258,106 @@ if authentication_status:
 
 
     elif menu == "📈 Dashboard Venditore":
-        st.subheader("📈 Dashboard Venditore")
+        import plotly.graph_objects as go
+        from datetime import datetime, timedelta
+        import pytz
 
-        prodotti_df = get_data(prodotti_ws)
+        st.markdown("## 📊 Dashboard venditore")
+        st.caption("🎯 Obiettivi personali di vendita – monitoraggio giornaliero e settimanale")
+
+        # --- PREPARAZIONE DATI ---
         vendite_df = get_data(vendite_ws)
 
-        if vendite_df.empty:
-            st.info("Nessuna vendita registrata ancora.")
+        # Se c'è la colonna timestamp, convertila in datetime
+        if "Timestamp" in vendite_df.columns:
+            vendite_df["Timestamp"] = pd.to_datetime(vendite_df["Timestamp"], format="%d/%m/%Y %H:%M", errors="coerce")
         else:
-            analisi = analisi_vendite(prodotti_df, vendite_df)
-            st.markdown("### 🧮 Confronto vendite tra Elia e Tommy")
-            st.dataframe(analisi, use_container_width=True)
+            vendite_df["Timestamp"] = pd.NaT
 
-            # Evidenzia il vincitore
-            king = analisi.loc[analisi["Plusvalenza media (%)"].idxmax(), "Venditore"]
-            gain = analisi["Plusvalenza media (%)"].max()
-            st.success(f"👑 King della vendita: **{king}** con una plusvalenza media del **{gain:.2f}%**")
+        # --- Calcolo vendite giornaliere e settimanali ---
+        italy_tz = pytz.timezone("Europe/Rome")
+        oggi = datetime.now(italy_tz).date()
+        settimana_inizio = oggi - timedelta(days=6)
 
+        # Converti prezzi totali in numerici
+        vendite_df["Prezzo_totale_vendita"] = vendite_df["Prezzo_totale_vendita"].apply(_clean_price)
+
+        # Filtra per oggi e settimana
+        vendite_giornaliere = vendite_df[vendite_df["Timestamp"].dt.date == oggi]
+        vendite_settimanali = vendite_df[
+            (vendite_df["Timestamp"].dt.date >= settimana_inizio) & (vendite_df["Timestamp"].dt.date <= oggi)
+        ]
+
+        totale_giorno = vendite_giornaliere["Prezzo_totale_vendita"].sum()
+        totale_settimana = vendite_settimanali["Prezzo_totale_vendita"].sum()
+
+        # --- Definisci obiettivi ---
+        obiettivo_giorno = 35.0
+        obiettivo_settimana = obiettivo_giorno * 7
+
+        progresso_giorno = min(totale_giorno / obiettivo_giorno, 1)
+        progresso_settimana = min(totale_settimana / obiettivo_settimana, 1)
+
+        # --- Grafico a torta GIORNALIERO ---
+        fig_giorno = go.Figure(
+            data=[
+                go.Pie(
+                    values=[progresso_giorno, 1 - progresso_giorno],
+                    labels=["Raggiunto", "Rimanente"],
+                    hole=0.6,
+                    marker_colors=["#00B894", "#E0E0E0"],
+                    textinfo="none"
+                )
+            ]
+        )
+        fig_giorno.update_layout(
+            title=f"🕒 Oggi ({oggi.strftime('%d/%m/%Y')})",
+            showlegend=False,
+            annotations=[
+                dict(text=f"{progresso_giorno*100:.0f}%", x=0.5, y=0.5, font_size=22, showarrow=False)
+            ],
+            height=300,
+            margin=dict(l=0, r=0, t=50, b=0),
+            paper_bgcolor="#F9FAFB",
+        )
+
+        # --- Grafico a torta SETTIMANALE ---
+        fig_settimana = go.Figure(
+            data=[
+                go.Pie(
+                    values=[progresso_settimana, 1 - progresso_settimana],
+                    labels=["Raggiunto", "Rimanente"],
+                    hole=0.6,
+                    marker_colors=["#007A87", "#E0E0E0"],
+                    textinfo="none"
+                )
+            ]
+        )
+        fig_settimana.update_layout(
+            title=f"📅 Ultimi 7 giorni",
+            showlegend=False,
+            annotations=[
+                dict(text=f"{progresso_settimana*100:.0f}%", x=0.5, y=0.5, font_size=22, showarrow=False)
+            ],
+            height=300,
+            margin=dict(l=0, r=0, t=50, b=0),
+            paper_bgcolor="#F9FAFB",
+        )
+
+        # --- Mostra grafici affiancati ---
+        col1, col2 = st.columns(2)
+        with col1:
+            st.plotly_chart(fig_giorno, use_container_width=True)
+        with col2:
+            st.plotly_chart(fig_settimana, use_container_width=True)
+
+        # --- Testo riassuntivo ---
+        st.markdown("---")
+        st.markdown(f"**Totale vendite oggi:** € {totale_giorno:.2f} su obiettivo € {obiettivo_giorno:.2f}")
+        st.markdown(f"**Totale vendite settimana:** € {totale_settimana:.2f} su obiettivo € {obiettivo_settimana:.2f}")
+
+        if progresso_giorno >= 1 and progresso_settimana < 1:
+            st.success("🔥 Hai raggiunto l'obiettivo giornaliero, continua così per la settimana!")
+        elif progresso_settimana >= 1:
+            st.balloons()
+            st.success("🏆 Complimenti! Hai raggiunto l'obiettivo settimanale!")
