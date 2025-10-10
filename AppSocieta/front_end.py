@@ -45,6 +45,10 @@ if authentication_status:
     st.title("💼 Gestione Società - Elia & Tommy")
     st.caption("Dashboard condivisa per gestire spese, vendite e saldi in tempo reale")
 
+    page = st.sidebar.radio(
+        "📑 Menu",
+        ["Inventario", "Vendite", "Bilancio", "King della Vendita"]
+    )
     tab1, tab2, tab3, tab4 = st.tabs(["📦 Inventario", "🧾 Vendite", "💰 Bilancio", "📈 King della Vendita"])
 
     # -------------------------------
