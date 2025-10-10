@@ -1,6 +1,7 @@
 [theme]
-primaryColor = "#00B894"         # Colore principale (pulsanti, link)
-backgroundColor = "#F9FAFB"      # Sfondo principale
-secondaryBackgroundColor = "#FFFFFF"  # Colonne e box
-textColor = "#2D3436"            # Testo
-font = "sans serif"              # sans serif | serif | monospace
+base="light"
+primaryColor="#00B894"
+secondaryBackgroundColor="#E8F5E9"
+backgroundColor="#F9FAFB"
+textColor="#1E272E"
+font="sans serif"
