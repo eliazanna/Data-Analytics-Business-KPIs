@@ -61,7 +61,7 @@ if authentication_status:
     # -------------------------------
     from data_utils import inventario_aggregato
 
-    if menu== "📦 Inventario"
+    if menu== "📦 Inventario":
         st.subheader("📦 Inventario reale aggregato")
 
         prodotti_df = get_data(prodotti_ws)
