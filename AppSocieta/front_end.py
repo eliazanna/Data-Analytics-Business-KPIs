@@ -4,23 +4,20 @@ from data_utils import get_data, add_row, calcola_bilancio, aggiorna_inventario
 import pandas as pd
 import streamlit_authenticator as stauth
 
-# --- CREDENZIALI ---
-users = {
-    "Elia": {
-        "name": "elia_zanna",
-        "password": "sonoilre"
-    },
-    "Tommy": {
-        "name": "tom_zanna",
-        "password": "sonounservofedele"
-    }
-}
+# --- CREDENZIALI DI ACCESSO ---
+usernames = ["Elia", "Tommy"]
+names = ["Elia Zanini", "Tommy Rossi"]
+passwords = ["tuapassword", "passwordtommy"]
 
+# Crea hash delle password
+hashed_passwords = stauth.Hasher(passwords).generate()
+
+# --- CONFIGURAZIONE LOGIN ---
 authenticator = stauth.Authenticate(
-    {u: {"name": users[u]["name"], "password": stauth.Hasher([users[u]["password"]]).generate()[0]}
-     for u in users},
-    "societa_app_cookie",   # nome del cookie
-    "chiavefirma123",       # chiave segreta
+    {"Elia": {"name": names[0], "password": hashed_passwords[0]},
+     "Tommy": {"name": names[1], "password": hashed_passwords[1]}},
+    "app_cookie_societa",    # nome cookie
+    "chiavefirma123",        # chiave segreta per cookie
     cookie_expiry_days=30
 )
 
@@ -30,12 +27,13 @@ name, authentication_status, username = authenticator.login("Login", "main")
 if authentication_status == False:
     st.error("❌ Username o password errati")
 
-if authentication_status == None:
+elif authentication_status == None:
     st.warning("🔐 Inserisci le credenziali per accedere")
 
-if authentication_status:
+elif authentication_status:
     st.sidebar.success(f"✅ Benvenuto {name}!")
     authenticator.logout("Logout", "sidebar")
+
 # -------------------------------
 # 🎨 CONFIGURAZIONE BASE
 # -------------------------------
