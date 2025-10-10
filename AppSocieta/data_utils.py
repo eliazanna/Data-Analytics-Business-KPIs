@@ -271,33 +271,34 @@ def inventario_aggregato(df_prodotti, df_vendite):
     Crea l'inventario reale:
     - Raggruppa per nome prodotto
     - Calcola costo medio pesato
-    - Calcola quantità totale
-    - Aggiorna quantità residue dopo le vendite
+    - Calcola quantità iniziale (totale acquistata)
+    - Calcola quantità residua dopo le vendite
     - Calcola prezzo medio di vendita
     """
 
     if df_prodotti.empty:
         return pd.DataFrame(columns=[
-            "Prodotto", "Quantità Totale", "Costo medio (€)",
-            "Prezzo medio vendita (€)", "Quantità venduta", "Quantità residua"
+            "Prodotto", "Quantità residua", "Quantità iniziale",
+            "Costo medio (€)", "Prezzo medio vendita (€)", "Quantità venduta"
         ])
 
     df_prodotti = df_prodotti.copy()
     df_prodotti["Prezzo_unitario"] = df_prodotti["Prezzo_unitario"].apply(_clean_price)
     df_prodotti["Quantita"] = pd.to_numeric(df_prodotti["Quantita"], errors="coerce").fillna(0)
 
-    # Calcolo costo medio pesato
+    # --- Calcolo costo medio pesato e quantità iniziale ---
     grouped = (
         df_prodotti
         .groupby("Nome")
         .apply(lambda x: pd.Series({
-            "Quantità Totale": x["Quantita"].sum(),
-            "Costo medio (€)": (x["Prezzo_unitario"] * x["Quantita"]).sum() / x["Quantita"].sum() if x["Quantita"].sum() > 0 else 0
+            "Quantità iniziale": x["Quantita"].sum(),
+            "Costo medio (€)": (x["Prezzo_unitario"] * x["Quantita"]).sum() / x["Quantita"].sum()
+            if x["Quantita"].sum() > 0 else 0
         }))
         .reset_index()
     )
 
-    # Aggiungi info vendite se esistono
+    # --- Aggiungi dati dalle vendite ---
     if not df_vendite.empty:
         df_vendite = df_vendite.copy()
         df_vendite["Prezzo_totale_vendita"] = df_vendite["Prezzo_totale_vendita"].apply(_clean_price)
@@ -308,12 +309,18 @@ def inventario_aggregato(df_prodotti, df_vendite):
             .groupby("Prodotto")
             .apply(lambda x: pd.Series({
                 "Quantità venduta": x["Quantita"].sum(),
-                "Prezzo medio vendita (€)": x["Prezzo_totale_vendita"].sum() / x["Quantita"].sum() if x["Quantita"].sum() > 0 else 0
+                "Prezzo medio vendita (€)": (
+                    x["Prezzo_totale_vendita"].sum() / x["Quantita"].sum()
+                    if x["Quantita"].sum() > 0 else 0
+                )
             }))
             .reset_index()
         )
 
-        grouped = pd.merge(grouped, vendite_group, left_on="Nome", right_on="Prodotto", how="left").drop(columns=["Prodotto"])
+        grouped = pd.merge(
+            grouped, vendite_group,
+            left_on="Nome", right_on="Prodotto", how="left"
+        ).drop(columns=["Prodotto"])
     else:
         grouped["Quantità venduta"] = 0
         grouped["Prezzo medio vendita (€)"] = 0.0
@@ -321,21 +328,26 @@ def inventario_aggregato(df_prodotti, df_vendite):
     grouped["Quantità venduta"] = grouped["Quantità venduta"].fillna(0)
     grouped["Prezzo medio vendita (€)"] = grouped["Prezzo medio vendita (€)"].fillna(0)
 
-    # Calcolo quantità residua
-    grouped["Quantità residua"] = (grouped["Quantità Totale"] - grouped["Quantità venduta"]).clip(lower=0)
+    # --- Calcolo quantità residua ---
+    grouped["Quantità residua"] = (grouped["Quantità iniziale"] - grouped["Quantità venduta"]).clip(lower=0)
 
-    # Arrotondamenti
+    # --- Arrotondamenti ---
     grouped["Costo medio (€)"] = grouped["Costo medio (€)"].round(2)
     grouped["Prezzo medio vendita (€)"] = grouped["Prezzo medio vendita (€)"].round(2)
 
-    # Ordina per nome
+    # --- Riordina colonne (Quantità residua prima) ---
     grouped = grouped[[
-        "Nome", "Quantità Totale", "Quantità venduta", "Quantità residua",
-        "Costo medio (€)", "Prezzo medio vendita (€)"
+        "Nome",
+        "Quantità residua",
+        "Quantità iniziale",
+        "Costo medio (€)",
+        "Prezzo medio vendita (€)",
+        "Quantità venduta"
     ]]
 
     grouped = grouped.rename(columns={"Nome": "Prodotto"})
     return grouped
+
 
 
 def send_telegram_message(text):
