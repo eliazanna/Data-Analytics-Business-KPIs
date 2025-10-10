@@ -253,107 +253,129 @@ if authentication_status:
                 st.session_state.pareggio_festeggiato = True
 
     # -------------------------------
-    # 📈 TAB 4: KING DELLA VENDITA
+    # 📈 TAB 4: DASHBOARD VENDITORE
     # -------------------------------
     elif menu == "📈 Dashboard Venditore":
         import plotly.graph_objects as go
         from datetime import datetime, timedelta
         import pytz
 
-        prodotti_df = get_data(prodotti_ws)
-        vendite_df_all = get_data(vendite_ws)
-
-        # Filtra le vendite dell' utente loggato
-
-        current_user = username.lower().strip()
-        vendite_df_all["Venditore"] = vendite_df_all["Venditore"].astype(str).str.strip().str.lower()
-        vendite_df = vendite_df_all[vendite_df_all["Venditore"] == current_user]
-
         st.markdown("## 📊 Dashboard venditore")
         st.caption("🎯 Obiettivi personali di vendita – monitoraggio giornaliero e settimanale")
 
+        # --- 1️⃣ LETTURA E PULIZIA DATI ---
+        prodotti_df = get_data(prodotti_ws)
+        vendite_df_all = get_data(vendite_ws)
 
+        if vendite_df_all.empty:
+            st.info("Nessuna vendita registrata ancora.")
+            st.stop()
 
-        if "Timestamp" in vendite_df.columns:
-            # Rimuove spazi e converte tutto in datetime (senza crash)
-            vendite_df["Timestamp"] = (
-                pd.to_datetime(vendite_df["Timestamp"].astype(str).str.strip(), 
-                            format="%d/%m/%Y %H:%M", 
-                            errors="coerce")
-            )
+        # Normalizza i nomi venditori, prezzi e timestamp
+        vendite_df_all["Venditore"] = vendite_df_all["Venditore"].astype(str).str.strip().str.lower()
+        vendite_df_all["Prezzo_totale_vendita"] = vendite_df_all["Prezzo_totale_vendita"].apply(_clean_price)
 
-            # Applica .dt solo se la conversione ha funzionato
-            if pd.api.types.is_datetime64_any_dtype(vendite_df["Timestamp"]):
-                vendite_df["Timestamp"] = vendite_df["Timestamp"].dt.tz_localize(None)
-            else:
-                st.warning("⚠️ I timestamp non sono stati riconosciuti come datetime.")
-                st.write(vendite_df["Timestamp"].head())
+        if "Timestamp" in vendite_df_all.columns:
+            vendite_df_all["Timestamp"] = pd.to_datetime(
+                vendite_df_all["Timestamp"].astype(str).str.strip(),
+                format="%d/%m/%Y %H:%M",
+                errors="coerce"
+            ).dt.tz_localize(None)
         else:
-            vendite_df["Timestamp"] = pd.NaT
+            vendite_df_all["Timestamp"] = pd.NaT
 
+        # --- 2️⃣ FILTRO PER UTENTE LOGGATO ---
+        current_user = username.lower().strip()
+
+        if current_user == "elia":
+            vendite_df = vendite_df_all.copy()   # 👑 Elia (admin) vede tutto
+        else:
+            vendite_df = vendite_df_all[vendite_df_all["Venditore"] == current_user]
+
+        # --- 3️⃣ DASHBOARD PERSONALE ---
         italy_tz = pytz.timezone("Europe/Rome")
         oggi = datetime.now(italy_tz).date()
         settimana_inizio = oggi - timedelta(days=6)
-        oggi_dt = pd.to_datetime(oggi)
-        settimana_inizio_dt = pd.to_datetime(settimana_inizio)
 
-
-
-        vendite_df["Prezzo_totale_vendita"] = vendite_df["Prezzo_totale_vendita"].apply(_clean_price)
-        
-        vendite_giornaliere = vendite_df[vendite_df["Timestamp"].dt.normalize() == oggi_dt]
+        # Filtro per date
+        vendite_giornaliere = vendite_df[vendite_df["Timestamp"].dt.date == oggi]
         vendite_settimanali = vendite_df[
-            (vendite_df["Timestamp"].dt.normalize() >= settimana_inizio_dt)
-            & (vendite_df["Timestamp"].dt.normalize() <= oggi_dt)
+            (vendite_df["Timestamp"].dt.date >= settimana_inizio)
+            & (vendite_df["Timestamp"].dt.date <= oggi)
         ]
 
         totale_giorno = vendite_giornaliere["Prezzo_totale_vendita"].sum()
         totale_settimana = vendite_settimanali["Prezzo_totale_vendita"].sum()
 
-        # --- Obiettivi ---
+        # Obiettivi e progressi
         obiettivo_giorno = 35.0
         obiettivo_settimana = obiettivo_giorno * 7
         progresso_giorno = min(totale_giorno / obiettivo_giorno, 1)
-        progresso_settimana = min(totale_settimana / obiettivo_settimana, 1)
+        progresso_settimanale = min(totale_settimana / obiettivo_settimana, 1)
 
-        # --- GRAFICI ---
+        # --- Grafico a torta giornaliero ---
+        fig_giorno = go.Figure(
+            data=[go.Pie(
+                values=[progresso_giorno, 1 - progresso_giorno],
+                hole=0.6,
+                marker_colors=["#00B894", "#E0E0E0"],
+                textinfo="none"
+            )]
+        )
+        fig_giorno.update_layout(
+            title=f"🕒 Oggi ({oggi.strftime('%d/%m/%Y')})",
+            showlegend=False,
+            annotations=[dict(text=f"{progresso_giorno*100:.0f}%", x=0.5, y=0.5, font_size=22, showarrow=False)],
+            height=300,
+            margin=dict(l=0, r=0, t=50, b=0),
+            paper_bgcolor="#F9FAFB",
+        )
+
+        # --- Grafico a torta settimanale ---
+        fig_settimana = go.Figure(
+            data=[go.Pie(
+                values=[progresso_settimanale, 1 - progresso_settimanale],
+                hole=0.6,
+                marker_colors=["#007A87", "#E0E0E0"],
+                textinfo="none"
+            )]
+        )
+        fig_settimana.update_layout(
+            title="📅 Ultimi 7 giorni",
+            showlegend=False,
+            annotations=[dict(text=f"{progresso_settimanale*100:.0f}%", x=0.5, y=0.5, font_size=22, showarrow=False)],
+            height=300,
+            margin=dict(l=0, r=0, t=50, b=0),
+            paper_bgcolor="#F9FAFB",
+        )
+
+        # --- Visualizza i grafici ---
         col1, col2 = st.columns(2)
         with col1:
-            fig_giorno = go.Figure(go.Pie(
-                values=[progresso_giorno, 1 - progresso_giorno],
-                hole=0.6, marker_colors=["#00B894", "#E0E0E0"], textinfo="none"))
-            fig_giorno.update_layout(title=f"🕒 Oggi ({oggi.strftime('%d/%m/%Y')})",
-                                    annotations=[dict(text=f"{progresso_giorno*100:.0f}%", x=0.5, y=0.5, font_size=22, showarrow=False)],
-                                    showlegend=False, height=300)
             st.plotly_chart(fig_giorno, use_container_width=True)
         with col2:
-            fig_settimana = go.Figure(go.Pie(
-                values=[progresso_settimana, 1 - progresso_settimana],
-                hole=0.6, marker_colors=["#007A87", "#E0E0E0"], textinfo="none"))
-            fig_settimana.update_layout(title="📅 Ultimi 7 giorni",
-                                        annotations=[dict(text=f"{progresso_settimana*100:.0f}%", x=0.5, y=0.5, font_size=22, showarrow=False)],
-                                        showlegend=False, height=300)
             st.plotly_chart(fig_settimana, use_container_width=True)
 
-        # --- INFO ---
+        # --- Totali e feedback ---
         st.markdown("---")
         st.markdown(f"**Totale vendite oggi:** € {totale_giorno:.2f} / € {obiettivo_giorno:.2f}")
-        st.markdown(f"**Totale vendite settimana:** € {totale_settimana:.2f} / € {obiettivo_settimana:.2f}")
+        st.markdown(f"**Totale vendite settimana:** € {totale_settimana:.2f} / € {obiettivo_settimanale:.2f}")
 
-        if progresso_giorno >= 1 and progresso_settimana < 1:
+        if progresso_giorno >= 1 and progresso_settimanale < 1:
             st.success("🔥 Hai raggiunto l'obiettivo giornaliero, continua così per la settimana!")
-        elif progresso_settimana >= 1:
+        elif progresso_settimanale >= 1:
             st.balloons()
             st.success("🏆 Complimenti! Hai raggiunto l'obiettivo settimanale!")
 
-        # --- SEZIONE ANALISI COMPLETA ---
+        # --- 4️⃣ ANALISI COMPLETA GLOBALE ---
         st.markdown("---")
         st.markdown("### 🧮 Confronto vendite tra Elia e Tommy")
+
         analisi = analisi_vendite(prodotti_df, vendite_df_all)
-        
-        st.dataframe(analisi, use_container_width=True)
-
-        king = analisi.loc[analisi["Plusvalenza media (%)"].idxmax(), "Venditore"]
-        gain = analisi["Plusvalenza media (%)"].max()
-        st.success(f"👑 King della vendita: **{king}** con una plusvalenza media del **{gain:.2f}%**")
-
+        if analisi.empty:
+            st.info("Nessuna vendita registrata per ora.")
+        else:
+            st.dataframe(analisi, use_container_width=True)
+            king = analisi.loc[analisi["Plusvalenza media (%)"].idxmax(), "Venditore"]
+            gain = analisi["Plusvalenza media (%)"].max()
+            st.success(f"👑 King della vendita: **{king.capitalize()}** con una plusvalenza media del **{gain:.2f}%**")
