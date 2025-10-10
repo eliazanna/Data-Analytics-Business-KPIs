@@ -281,15 +281,22 @@ if authentication_status:
         oggi = datetime.now(italy_tz).date()
         settimana_inizio = oggi - timedelta(days=6)
 
-        # Converti prezzi totali in numerici
+        # Converti i tuoi limiti di confronto in datetime
+        oggi_dt = pd.to_datetime(oggi)
+        settimana_inizio_dt = pd.to_datetime(settimana_inizio)
+
         vendite_df["Prezzo_totale_vendita"] = vendite_df["Prezzo_totale_vendita"].apply(_clean_price)
 
-        # Filtra per oggi e settimana
-        vendite_giornaliere = vendite_df[vendite_df["Timestamp"].dt.date == oggi]
+        # --- Filtra per oggi e settimana ---
+        vendite_giornaliere = vendite_df[
+            vendite_df["Timestamp"].dt.normalize() == oggi_dt
+        ]
+
         vendite_settimanali = vendite_df[
-    (vendite_df["Timestamp"].dt.date >= settimana_inizio)
-    & (vendite_df["Timestamp"].dt.date <= oggi)
-]
+            (vendite_df["Timestamp"].dt.normalize() >= settimana_inizio_dt)
+            & (vendite_df["Timestamp"].dt.normalize() <= oggi_dt)
+        ]
+
         totale_giorno = vendite_giornaliere["Prezzo_totale_vendita"].sum()
         totale_settimana = vendite_settimanali["Prezzo_totale_vendita"].sum()
 
