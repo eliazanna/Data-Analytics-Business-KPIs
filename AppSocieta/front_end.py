@@ -298,16 +298,14 @@ if authentication_status:
 
 
         vendite_df["Prezzo_totale_vendita"] = vendite_df["Prezzo_totale_vendita"].apply(_clean_price)
-        st.write("📅 Esempio Timestamp (prime 5 righe):", vendite_df[["Timestamp", "Venditore"]].head())
+        
         vendite_giornaliere = vendite_df[vendite_df["Timestamp"].dt.normalize() == oggi_dt]
         vendite_settimanali = vendite_df[
             (vendite_df["Timestamp"].dt.normalize() >= settimana_inizio_dt)
             & (vendite_df["Timestamp"].dt.normalize() <= oggi_dt)
         ]
-        st.write("🔍 DEBUG – Venditori presenti nel foglio:")
-        st.write(vendite_df_all["Venditore"].unique())
-
-        st.write("👤 Utente loggato:", username)
+        current_user = username.lower().strip()
+        vendite_df_all["Venditore"] = vendite_df_all["Venditore"].astype(str).str.strip().str.lower()
 
         totale_giorno = vendite_giornaliere["Prezzo_totale_vendita"].sum()
         totale_settimana = vendite_settimanali["Prezzo_totale_vendita"].sum()
