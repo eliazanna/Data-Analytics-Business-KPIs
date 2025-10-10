@@ -272,7 +272,8 @@ def analisi_vendite(df_prodotti, df_vendite):
         "Ordini_registrati": "Ordini registrati",
         "Ricavo_totale": "Ricavo totale (€)",
         "Costo_totale": "Costo totale (€)",
-        "Guadagno_totale": "Guadagno totale (€)"
+        "Guadagno_totale": "Guadagno totale (€)",
+        "Plusvalenza_media (%)": "Plusvalenza media (%)"  # ✅ aggiunto
     })
 
     risultati = risultati.round(2)
