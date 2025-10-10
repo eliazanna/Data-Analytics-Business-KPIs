@@ -368,6 +368,10 @@ if authentication_status:
                 }),
                 use_container_width=True
             )
+            st.write("🔍 Colonne prodotti_df:", prodotti_df.columns.tolist())
+            st.write("🔍 Colonne vendite_df_all:", vendite_df_all.columns.tolist())
+            st.write("📦 Esempio prodotti_df:", prodotti_df.head(3))
+            st.write("🧾 Esempio vendite_df_all:", vendite_df_all.head(3))
 
             # Identifica il "King della vendita"
             king_row = analisi.loc[analisi["Plusvalenza media (%)"].idxmax()]
