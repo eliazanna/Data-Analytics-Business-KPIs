@@ -68,7 +68,7 @@ if authentication_status:
         with col1:
             nome = st.text_input("Nome prodotto")
         with col2:
-            prezzo = st.text_input("Prezzo unitario (€)", placeholder="es. 4,50")
+            prezzo_input = st.text_input("Prezzo unitario (€)", placeholder="es. 4,50")
         with col3:
             quantita = st.number_input("Quantità", min_value=1, step=1)
         with col4:
