@@ -349,8 +349,8 @@ if authentication_status:
         # --- SEZIONE ANALISI COMPLETA ---
         st.markdown("---")
         st.markdown("### 🧮 Confronto vendite tra Elia e Tommy")
-
-        analisi = analisi_vendite(prodotti_df, vendite_df)
+        analisi = analisi_vendite(prodotti_df, vendite_df_all)
+        
         st.dataframe(analisi, use_container_width=True)
 
         king = analisi.loc[analisi["Plusvalenza media (%)"].idxmax(), "Venditore"]
