@@ -4,10 +4,14 @@ from data_utils import get_data, add_row, calcola_bilancio, aggiorna_inventario
 import pandas as pd
 import streamlit_authenticator as stauth
 
-
+st.set_page_config(
+    page_title="Gestione Società - Elia & Tommy",
+    page_icon="💼",
+    layout="wide"   # <--- importantissimo
+)
 
 # --- CREDENZIALI ---
-names = ["Elia Zanini", "Tommy Rossi"]
+names = ["Elia Zanini", "Tommaso"]
 usernames = ["elia", "tommy"]
 passwords = [
     str(st.secrets.get("elia_password", "sonoilre")),
