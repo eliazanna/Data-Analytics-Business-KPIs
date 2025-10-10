@@ -31,8 +31,7 @@ authenticator = stauth.Authenticate(
 )
 # --- LOGIN ---
 # --- LOGIN ---
-name, authentication_status, username = authenticator.login("Login", "main")
-
+name, authentication_status, username = authenticator.login("Login", "sidebar")
 if authentication_status:
     # ✅ SOLO GLI UTENTI AUTENTICATI POSSONO VEDERE DA QUI IN POI
     st.sidebar.success(f"✅ Benvenuto {name}!")
