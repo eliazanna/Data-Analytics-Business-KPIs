@@ -184,6 +184,7 @@ if authentication_status:
 
         # Countdown al pareggio
         st.divider()
+
         # --- BILANCIO GLOBALE E AVANZAMENTO ---
         totale_spese = b["totale_spese"]
         totale_entrate = b["totale_entrate"]
@@ -195,18 +196,25 @@ if authentication_status:
         else:
             progresso = 0
 
+        # inizializza flag per palloncini
+        if "pareggio_festeggiato" not in st.session_state:
+            st.session_state.pareggio_festeggiato = False
+
         # --- Sezione dinamica ---
         if totale_entrate < totale_spese:
-            # Mancano al pareggio
             st.markdown("### 🎯 Mancano al pareggio")
             st.metric("Importo mancante", f"€ {pareggio:.2f}")
             st.progress(progresso)
             st.markdown(f"**Avanzamento:** {progresso*100:.1f}% delle spese coperte")
+
+            # resetta il flag se torni sotto il pareggio
+            st.session_state.pareggio_festeggiato = False
+
         elif abs(totale_entrate - totale_spese) < 1:
-            # Pareggio preciso
             st.markdown("### ✅ Pareggio raggiunto!")
             st.progress(1.0)
-            st.balloons()
+            st.session_state.pareggio_festeggiato = False
+
         else:
             # PROFITTO 🤑
             st.markdown("""
@@ -223,6 +231,11 @@ if authentication_status:
             st.metric("Profitto totale", f"€ {guadagno_netto:.2f}")
             st.progress(1.0)
             st.markdown("Hai superato il pareggio e stai generando **profitto netto!** 🥳")
+
+            # 🎈 Mostra i palloncini solo la prima volta che superi il pareggio
+            if not st.session_state.pareggio_festeggiato:
+                st.balloons()
+                st.session_state.pareggio_festeggiato = True
 
     # -------------------------------
     # 📈 TAB 4: KING DELLA VENDITA
