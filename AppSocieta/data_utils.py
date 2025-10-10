@@ -188,61 +188,82 @@ def registra_vendita_multipla(df_prodotti, vendita_dict, prezzo_totale, venditor
 # 📊 Analisi vendite: "King della vendita"
 # ---------------------------------------------------
 def analisi_vendite(df_prodotti, df_vendite):
-    """Crea una tabella comparativa tra Elia e Tommy con plusvalenza media."""
+    """
+    Crea una tabella comparativa tra Elia e Tommy con:
+    - numero di ordini (non singoli prodotti)
+    - ricavo totale
+    - costo totale
+    - guadagno totale
+    - plusvalenza media ponderata
+    """
+
     if df_vendite.empty or df_prodotti.empty:
         return pd.DataFrame(columns=[
-            "Venditore", "Prodotti venduti", "Ricavo totale (€)",
-            "Prezzo medio vendita (€)", "Costo medio acquisto (€)", "Plusvalenza media (%)"
+            "Venditore", "Ordini registrati", "Ricavo totale (€)",
+            "Costo totale (€)", "Guadagno totale (€)", "Plusvalenza media (%)"
         ])
 
     df_prodotti = df_prodotti.copy()
     df_vendite = df_vendite.copy()
+
+    # pulizia
     df_prodotti["Prezzo_unitario"] = df_prodotti["Prezzo_unitario"].apply(_clean_price)
     df_vendite["Prezzo_totale_vendita"] = df_vendite["Prezzo_totale_vendita"].apply(_clean_price)
     df_vendite["Quantita"] = pd.to_numeric(df_vendite["Quantita"], errors="coerce").fillna(0)
 
     risultati = []
+
     for venditore in ["Elia", "Tommy"]:
         vendite_v = df_vendite[df_vendite["Venditore"] == venditore]
         if vendite_v.empty:
             risultati.append({
                 "Venditore": venditore,
-                "Prodotti venduti": 0,
+                "Ordini registrati": 0,
                 "Ricavo totale (€)": 0.0,
-                "Prezzo medio vendita (€)": 0.0,
-                "Costo medio acquisto (€)": 0.0,
+                "Costo totale (€)": 0.0,
+                "Guadagno totale (€)": 0.0,
                 "Plusvalenza media (%)": 0.0,
             })
             continue
 
-        ricavo_tot = vendite_v["Prezzo_totale_vendita"].sum()
-        quantita_tot = vendite_v["Quantita"].sum()
-        prezzo_medio_vendita = ricavo_tot / quantita_tot if quantita_tot > 0 else 0
+        # --- Ricavo totale e numero ordini (conteggio righe vendita)
+        ricavo_totale = vendite_v["Prezzo_totale_vendita"].sum()
+        ordini = len(vendite_v)
 
-        costi = []
+        # --- Calcolo costo totale
+        costo_totale = 0
+        plusvalenze = []
         for _, r in vendite_v.iterrows():
             nome = str(r["Prodotto"]).strip()
             qta = r["Quantita"]
-            prezzo_acq = df_prodotti.loc[df_prodotti["Nome"] == nome, "Prezzo_unitario"]
-            if not prezzo_acq.empty:
-                costi.append(float(prezzo_acq.values[0]) * qta)
-        costo_tot = sum(costi)
-        costo_medio = (costo_tot / quantita_tot) if quantita_tot > 0 else 0
+            prezzo_vendita = float(r["Prezzo_totale_vendita"])
+            prezzo_acquisto = df_prodotti.loc[df_prodotti["Nome"] == nome, "Prezzo_unitario"]
 
-        plusvalenza = 0.0
-        if costo_medio > 0:
-            plusvalenza = ((prezzo_medio_vendita - costo_medio) / costo_medio) * 100
+            if not prezzo_acquisto.empty:
+                costo = float(prezzo_acquisto.values[0]) * qta
+                costo_totale += costo
+                if costo > 0:
+                    plusvalenze.append((prezzo_vendita - costo) / costo * 100)
+
+        guadagno = ricavo_totale - costo_totale
+        plusvalenza_media = sum(plusvalenze) / len(plusvalenze) if plusvalenze else 0
 
         risultati.append({
             "Venditore": venditore,
-            "Prodotti venduti": int(quantita_tot),
-            "Ricavo totale (€)": round(ricavo_tot, 2),
-            "Prezzo medio vendita (€)": round(prezzo_medio_vendita, 2),
-            "Costo medio acquisto (€)": round(costo_medio, 2),
-            "Plusvalenza media (%)": round(plusvalenza, 2)
+            "Ordini registrati": ordini,
+            "Ricavo totale (€)": round(ricavo_totale, 2),
+            "Costo totale (€)": round(costo_totale, 2),
+            "Guadagno totale (€)": round(guadagno, 2),
+            "Plusvalenza media (%)": round(plusvalenza_media, 2)
         })
 
-    return pd.DataFrame(risultati)
+    df_risultati = pd.DataFrame(risultati)
+
+    # ordina per guadagno totale decrescente
+    df_risultati = df_risultati.sort_values("Guadagno totale (€)", ascending=False).reset_index(drop=True)
+
+    return df_risultati
+
 
 def inventario_aggregato(df_prodotti, df_vendite):
     """

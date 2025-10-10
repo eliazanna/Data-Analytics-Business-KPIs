@@ -201,9 +201,3 @@ if authentication_status:
             gain = analisi["Plusvalenza media (%)"].max()
             st.success(f"👑 King della vendita: **{king}** con una plusvalenza media del **{gain:.2f}%**")
 
-            # Mostra grafico comparativo
-            st.markdown("### 📊 Grafico confronto plusvalenza")
-            st.bar_chart(
-                data=analisi.set_index("Venditore")[["Plusvalenza media (%)"]],
-                use_container_width=True
-            )
