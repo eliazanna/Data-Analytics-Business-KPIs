@@ -213,6 +213,7 @@ def analisi_vendite(df_prodotti, df_vendite):
     - guadagno totale
     - plusvalenza media ponderata
     """
+    df_prodotti = df_prodotti.rename(columns={"Nome": "Prodotto"})
 
     if df_vendite.empty or df_prodotti.empty:
         return pd.DataFrame(columns=[
