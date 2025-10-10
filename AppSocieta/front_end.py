@@ -264,7 +264,9 @@ if authentication_status:
         vendite_df_all = get_data(vendite_ws)
 
         # Filtra le vendite dell' utente loggato
-        current_user = username
+
+        current_user = username.lower().strip()
+        vendite_df_all["Venditore"] = vendite_df_all["Venditore"].astype(str).str.strip().str.lower()
         vendite_df = vendite_df_all[vendite_df_all["Venditore"] == current_user]
 
         st.markdown("## 📊 Dashboard venditore")
@@ -304,8 +306,6 @@ if authentication_status:
             (vendite_df["Timestamp"].dt.normalize() >= settimana_inizio_dt)
             & (vendite_df["Timestamp"].dt.normalize() <= oggi_dt)
         ]
-        current_user = username.lower().strip()
-        vendite_df_all["Venditore"] = vendite_df_all["Venditore"].astype(str).str.strip().str.lower()
 
         totale_giorno = vendite_giornaliere["Prezzo_totale_vendita"].sum()
         totale_settimana = vendite_settimanali["Prezzo_totale_vendita"].sum()
