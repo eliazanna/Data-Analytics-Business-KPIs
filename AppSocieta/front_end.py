@@ -304,6 +304,10 @@ if authentication_status:
             (vendite_df["Timestamp"].dt.normalize() >= settimana_inizio_dt)
             & (vendite_df["Timestamp"].dt.normalize() <= oggi_dt)
         ]
+        st.write("🔍 DEBUG – Venditori presenti nel foglio:")
+        st.write(vendite_df_all["Venditore"].unique())
+
+        st.write("👤 Utente loggato:", username)
 
         totale_giorno = vendite_giornaliere["Prezzo_totale_vendita"].sum()
         totale_settimana = vendite_settimanali["Prezzo_totale_vendita"].sum()
