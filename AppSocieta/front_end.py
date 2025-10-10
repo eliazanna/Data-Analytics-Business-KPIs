@@ -56,7 +56,7 @@ if authentication_status:
     # Menu statico in verticale
     menu = st.sidebar.radio(
         "Navigazione",
-        ["📦 Inventario", "🧾 Vendite", "💰 Bilancio", "📈 King della Vendita"],
+        ["📦 Inventario", "🧾 Vendite", "💰 Bilancio", "📈 Dashboard Venditore"],
         index=0,   # pagina predefinita (Inventario)
         key="menu_choice"
     )
@@ -257,8 +257,8 @@ if authentication_status:
     # -------------------------------
 
 
-    elif menu == "📈 King della Vendita":
-        st.subheader("📈 King della Vendita")
+    elif menu == "📈 Dashboard Venditore":
+        st.subheader("📈 Dashboard Venditore")
 
         prodotti_df = get_data(prodotti_ws)
         vendite_df = get_data(vendite_ws)
