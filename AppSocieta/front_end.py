@@ -1,6 +1,6 @@
 import streamlit as st
 from app import prodotti_ws, vendite_ws
-from data_utils import registra_vendita_multipla,inventario_aggregato, analisi_vendite, get_data, add_row, calcola_bilancio, aggiorna_inventario, _clean_price
+from data_utils import registra_vendita_multipla,inventario_aggregato, analisi_vendite, get_data, add_row, calcola_bilancio, aggiorna_inventario
 import pandas as pd
 import streamlit_authenticator as stauth
 
@@ -370,3 +370,22 @@ if authentication_status:
         elif progresso_settimana >= 1:
             st.balloons()
             st.success("🏆 Complimenti! Hai raggiunto l'obiettivo settimanale!")
+
+
+        st.subheader("📈 Dashboard Venditore")
+
+        prodotti_df = get_data(prodotti_ws)
+        vendite_df = get_data(vendite_ws)
+
+        if vendite_df.empty:
+            st.info("Nessuna vendita registrata ancora.")
+        else:
+            analisi = analisi_vendite(prodotti_df, vendite_df)
+            st.markdown("### 🧮 Confronto vendite tra Elia e Tommy")
+            st.dataframe(analisi, use_container_width=True)
+
+            # Evidenzia il vincitore
+            king = analisi.loc[analisi["Plusvalenza media (%)"].idxmax(), "Venditore"]
+            gain = analisi["Plusvalenza media (%)"].max()
+            st.success(f"👑 King della vendita: **{king}** con una plusvalenza media del **{gain:.2f}%**")
+
