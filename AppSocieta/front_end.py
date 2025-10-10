@@ -274,6 +274,18 @@ if authentication_status:
         prodotti_df = get_data(prodotti_ws)
         vendite_df = get_data(vendite_ws)
 
+        st.markdown("### 🧩 DEBUG - Analisi colonna Timestamp")
+
+        # Visualizza i primi valori e il loro tipo
+        if "Timestamp" in vendite_df.columns:
+            st.write("Esempi di Timestamp (prime 5 righe):")
+            st.write(vendite_df["Timestamp"].head())
+            st.write("Tipo effettivo dei valori nella colonna:")
+            st.write(vendite_df["Timestamp"].apply(lambda x: type(x)).value_counts())
+        else:
+            st.error("❌ Nessuna colonna 'Timestamp' trovata nel foglio vendite!")
+
+
         if "Timestamp" in vendite_df.columns:
             vendite_df["Timestamp"] = vendite_df["Timestamp"].astype(str).str.strip()
 
