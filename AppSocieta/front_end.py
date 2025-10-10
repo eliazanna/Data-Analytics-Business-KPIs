@@ -271,8 +271,10 @@ if authentication_status:
         # Se c'è la colonna timestamp, convertila in datetime
         if "Timestamp" in vendite_df.columns:
             vendite_df["Timestamp"] = pd.to_datetime(vendite_df["Timestamp"], format="%d/%m/%Y %H:%M", errors="coerce")
+            vendite_df["Timestamp"] = vendite_df["Timestamp"].dt.tz_localize(None)
         else:
             vendite_df["Timestamp"] = pd.NaT
+
 
         # --- Calcolo vendite giornaliere e settimanali ---
         italy_tz = pytz.timezone("Europe/Rome")
