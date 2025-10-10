@@ -294,11 +294,11 @@ if authentication_status:
         settimana_inizio = oggi - timedelta(days=6)
         oggi_dt = pd.to_datetime(oggi)
         settimana_inizio_dt = pd.to_datetime(settimana_inizio)
-        st.write("📅 Esempio Timestamp (prime 5 righe):", vendite_df[["Timestamp", "Venditore"]].head())
+
 
 
         vendite_df["Prezzo_totale_vendita"] = vendite_df["Prezzo_totale_vendita"].apply(_clean_price)
-
+        st.write("📅 Esempio Timestamp (prime 5 righe):", vendite_df[["Timestamp", "Venditore"]].head())
         vendite_giornaliere = vendite_df[vendite_df["Timestamp"].dt.normalize() == oggi_dt]
         vendite_settimanali = vendite_df[
             (vendite_df["Timestamp"].dt.normalize() >= settimana_inizio_dt)
