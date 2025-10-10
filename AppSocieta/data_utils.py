@@ -206,82 +206,88 @@ def registra_vendita_multipla(df_prodotti, vendita_dict, prezzo_totale, venditor
 # ---------------------------------------------------
 def analisi_vendite(df_prodotti, df_vendite):
     """
-    Calcola per ogni venditore:
-    - Numero ordini registrati
+    Per venditore calcola:
+    - Ordini registrati (multi-ordine = 1, via (Venditore, Timestamp) unici)
     - Ricavo totale
-    - Costo totale (derivato dal foglio prodotti)
+    - Costo totale (usando costo medio pesato per prodotto)
     - Guadagno totale
     - Plusvalenza media (%)
     """
+    import pandas as pd
 
-    # 🧱 Controllo iniziale
     if df_vendite.empty or df_prodotti.empty:
         return pd.DataFrame(columns=[
             "Venditore", "Ordini registrati", "Ricavo totale (€)",
             "Costo totale (€)", "Guadagno totale (€)", "Plusvalenza media (%)"
         ])
 
-    # --- 1️⃣ PULIZIA E NORMALIZZAZIONE ---
-    df_prodotti = df_prodotti.copy()
-    df_vendite = df_vendite.copy()
+    # --- Pulizia ---
+    dfp = df_prodotti.copy()
+    dfv = df_vendite.copy()
 
-    # Uniforma i nomi colonne
-    if "Nome" in df_prodotti.columns:
-        df_prodotti = df_prodotti.rename(columns={"Nome": "Prodotto"})
+    # uniforma nomi
+    if "Nome" in dfp.columns:
+        dfp = dfp.rename(columns={"Nome": "Prodotto"})
 
-    # Pulisce prezzi e quantità
-    df_prodotti["Prodotto"] = df_prodotti["Prodotto"].astype(str).str.strip().str.lower()
-    df_prodotti["Prezzo_unitario"] = df_prodotti["Prezzo_unitario"].apply(_clean_price)
+    dfp["Prodotto"] = dfp["Prodotto"].astype(str).str.strip().str.lower()
+    dfp["Prezzo_unitario"] = dfp["Prezzo_unitario"].apply(_clean_price)
+    dfp["Quantita"] = pd.to_numeric(dfp["Quantita"], errors="coerce").fillna(0)
 
-    df_vendite["Prodotto"] = df_vendite["Prodotto"].astype(str).str.strip().str.lower()
-    df_vendite["Venditore"] = df_vendite["Venditore"].astype(str).str.strip().str.capitalize()
-    df_vendite["Prezzo_totale_vendita"] = df_vendite["Prezzo_totale_vendita"].apply(_clean_price)
-    df_vendite["Quantita"] = pd.to_numeric(df_vendite["Quantita"], errors="coerce").fillna(0)
+    dfv["Prodotto"] = dfv["Prodotto"].astype(str).str.strip().str.lower()
+    dfv["Venditore"] = dfv["Venditore"].astype(str).str.strip().str.capitalize()
+    dfv["Prezzo_totale_vendita"] = dfv["Prezzo_totale_vendita"].apply(_clean_price)
+    dfv["Quantita"] = pd.to_numeric(dfv["Quantita"], errors="coerce").fillna(0)
+    # timestamp come stringa pulita (basta per l'unicità dell'ordine)
+    if "Timestamp" in dfv.columns:
+        dfv["Timestamp"] = dfv["Timestamp"].astype(str).str.strip()
+    else:
+        dfv["Timestamp"] = ""
 
-    # --- 2️⃣ MERGE TRA FOGLI ---
-    df_merged = df_vendite.merge(
-        df_prodotti[["Prodotto", "Prezzo_unitario"]],
-        on="Prodotto",
-        how="left"
+    # --- Costo medio pesato per prodotto (UNA riga per prodotto) ---
+    costi = (
+        dfp.groupby("Prodotto").apply(
+            lambda x: (x["Prezzo_unitario"] * x["Quantita"]).sum() / x["Quantita"].sum()
+            if x["Quantita"].sum() > 0 else 0.0
+        ).reset_index(name="Costo_medio_unitario")
     )
 
-    # Calcola costo totale per ogni riga
-    df_merged["Costo_totale"] = df_merged["Prezzo_unitario"] * df_merged["Quantita"]
+    # --- Merge vendite + costi medi (niente duplicazioni) ---
+    m = dfv.merge(costi, on="Prodotto", how="left")
+    m["Costo_totale"] = m["Costo_medio_unitario"].fillna(0) * m["Quantita"]
 
-    # --- 3️⃣ AGGREGAZIONE PER VENDITORE ---
-    risultati = (
-        df_merged.groupby("Venditore")
-        .agg(
-            Ordini_registrati=("Prodotto", "count"),
-            Ricavo_totale=("Prezzo_totale_vendita", "sum"),
-            Costo_totale=("Costo_totale", "sum")
-        )
-        .reset_index()
+    # --- Totali per venditore ---
+    totali = (
+        m.groupby("Venditore", as_index=False)
+         .agg(Ricavo_totale=("Prezzo_totale_vendita", "sum"),
+              Costo_totale=("Costo_totale", "sum"))
     )
 
-    # Calcoli derivati
-    risultati["Guadagno_totale"] = risultati["Ricavo_totale"] - risultati["Costo_totale"]
-    risultati["Plusvalenza_media (%)"] = risultati.apply(
-        lambda r: (r["Guadagno_totale"] / r["Costo_totale"] * 100) if r["Costo_totale"] > 0 else 0,
+    # --- Ordini registrati: (Venditore, Timestamp) unici ---
+    ordini = (
+        dfv[["Venditore", "Timestamp"]]
+        .drop_duplicates()
+        .groupby("Venditore", as_index=False)
+        .size()
+        .rename(columns={"size": "Ordini registrati"})
+    )
+
+    # --- Composizione finale ---
+    risultati = totali.merge(ordini, on="Venditore", how="left").fillna({"Ordini registrati": 0})
+    risultati["Guadagno totale (€)"] = risultati["Ricavo_totale"] - risultati["Costo_totale"]
+    risultati["Plusvalenza media (%)"] = risultati.apply(
+        lambda r: (r["Guadagno totale (€)"] / r["Costo_totale"] * 100) if r["Costo_totale"] > 0 else 0.0,
         axis=1
     )
 
-    # --- 4️⃣ FORMATTAZIONE FINALE ---
     risultati = risultati.rename(columns={
-        "Venditore": "Venditore",
-        "Ordini_registrati": "Ordini registrati",
         "Ricavo_totale": "Ricavo totale (€)",
-        "Costo_totale": "Costo totale (€)",
-        "Guadagno_totale": "Guadagno totale (€)",
-        "Plusvalenza_media (%)": "Plusvalenza media (%)"  # ✅ aggiunto
-    })
+        "Costo_totale": "Costo totale (€)"
+    }).round(2)
 
-    risultati = risultati.round(2)
-
-    # Ordina per guadagno totale decrescente
+    # ordina per guadagno
     risultati = risultati.sort_values("Guadagno totale (€)", ascending=False).reset_index(drop=True)
 
-    # --- 5️⃣ GARANTISCI SEMPRE ENTRAMBI I VENDITORI ---
+    # garantisci sempre Elia e Tommy
     for nome in ["Elia", "Tommy"]:
         if nome not in risultati["Venditore"].values:
             risultati.loc[len(risultati)] = {
@@ -294,6 +300,7 @@ def analisi_vendite(df_prodotti, df_vendite):
             }
 
     return risultati
+
 
 
 
