@@ -265,6 +265,7 @@ def analisi_vendite(df_prodotti, df_vendite):
     return df_risultati
 
 
+
 def inventario_aggregato(df_prodotti, df_vendite):
     """
     Crea l'inventario reale:
