@@ -4,21 +4,31 @@ from data_utils import get_data, add_row, calcola_bilancio, aggiorna_inventario
 import pandas as pd
 import streamlit_authenticator as stauth
 
-# --- CREDENZIALI DI ACCESSO ---
+
+st.set_page_config(
+    page_title="Gestione Società - Elia & Tommy",
+    page_icon="💼",
+    layout="wide"
+)
+
+# --- CREDENZIALI ---
 usernames = ["Elia", "Tommy"]
 names = ["Elia Zanini", "Tommy Rossi"]
-passwords = [st.secrets["auth"]["elia_password"], st.secrets["auth"]["tommy_password"]]
+passwords = [
+    st.secrets.get("auth", {}).get("elia_password", "placeholder_elia"),
+    st.secrets.get("auth", {}).get("tommy_password", "placeholder_tommy")
+]
 
-
-# Crea hash delle password
 hashed_passwords = stauth.Hasher(passwords).generate()
 
-# --- CONFIGURAZIONE LOGIN ---
+# --- LOGIN CONFIG ---
 authenticator = stauth.Authenticate(
-    {"Elia": {"name": names[0], "password": hashed_passwords[0]},
-     "Tommy": {"name": names[1], "password": hashed_passwords[1]}},
-    "app_cookie_societa",    # nome cookie
-    "chiavefirma123",        # chiave segreta per cookie
+    {
+        "Elia": {"name": names[0], "password": hashed_passwords[0]},
+        "Tommy": {"name": names[1], "password": hashed_passwords[1]}
+    },
+    "cookie_societa",
+    "firma_cookie123",
     cookie_expiry_days=30
 )
 
