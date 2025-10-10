@@ -270,9 +270,6 @@ if authentication_status:
         st.markdown("## 📊 Dashboard venditore")
         st.caption("🎯 Obiettivi personali di vendita – monitoraggio giornaliero e settimanale")
 
-        # --- PREPARAZIONE DATI ---
-        prodotti_df = get_data(prodotti_ws)
-        vendite_df = get_data(vendite_ws)
 
 
         if "Timestamp" in vendite_df.columns:
