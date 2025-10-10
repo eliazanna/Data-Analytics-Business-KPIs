@@ -13,7 +13,7 @@ st.set_page_config(
 
 # --- CREDENZIALI ---
 names = ["Elia Zanini", "Tommaso"]
-usernames = ["elia", "tommy"]
+usernames = ["Elia", "Tommy"]
 passwords = [
     str(st.secrets.get("elia_password", "sonoilre")),
     str(st.secrets.get("tommy_password", "sonounservofedele"))
@@ -23,8 +23,8 @@ hashed_passwords = stauth.Hasher(passwords).generate()
 
 credentials = {
     "usernames": {
-        "elia": {"name": names[0], "password": hashed_passwords[0]},
-        "tommy": {"name": names[1], "password": hashed_passwords[1]}
+        "Elia": {"name": names[0], "password": hashed_passwords[0]},
+        "Tommy": {"name": names[1], "password": hashed_passwords[1]}
     }
 }
 
