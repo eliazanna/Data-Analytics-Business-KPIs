@@ -345,14 +345,15 @@ def send_telegram_message(text):
         chat_id = st.secrets["telegram"]["chat_id"]
 
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+        payload_base = {"text": text, "parse_mode": "HTML"}
 
-        response = requests.post(url, data=payload, timeout=10)
-
-        if response.status_code != 200:
-            print("⚠️ Telegram error:", response.text)
-        else:
-            print("✅ Messaggio Telegram inviato con successo!")
+        for chat_id in chat_ids:
+            payload = payload_base | {"chat_id": chat_id}
+            response = requests.post(url, data=payload, timeout=10)
+            if response.status_code != 200:
+                print(f"⚠️ Errore Telegram ({chat_id}):", response.text)
+            else:
+                print(f"✅ Messaggio Telegram inviato a {chat_id}")
     except Exception as e:
         print("❌ Errore Telegram:", e)
         
