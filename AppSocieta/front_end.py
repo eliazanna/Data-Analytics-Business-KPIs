@@ -264,17 +264,9 @@ if authentication_status:
         st.markdown("## 📊 Dashboard venditore")
         st.caption("🎯 Obiettivi personali di vendita – monitoraggio giornaliero e settimanale")
 
-        # --- Ricarica dati live ---
-        if st.button("🔄 Aggiorna dati vendite", type="secondary"):
-            st.cache_data.clear()
-            st.rerun()
-
-
         # --- PREPARAZIONE DATI ---
         prodotti_df = get_data(prodotti_ws)
         vendite_df = get_data(vendite_ws)
-
-        st.markdown("### 🧩 DEBUG - Analisi colonna Timestamp")
 
 
         if "Timestamp" in vendite_df.columns:
