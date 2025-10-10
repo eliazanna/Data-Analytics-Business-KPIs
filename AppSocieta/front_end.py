@@ -324,7 +324,7 @@ if authentication_status:
                 hole=0.6, marker_colors=["#00B894", "#E0E0E0"], textinfo="none"))
             fig_giorno.update_layout(title=f"🕒 Oggi ({oggi.strftime('%d/%m/%Y')})",
                                     annotations=[dict(text=f"{progresso_giorno*100:.0f}%", x=0.5, y=0.5, font_size=22, showarrow=False)],
-                                    showlegend=False, height=500)
+                                    showlegend=False, height=400)
             st.plotly_chart(fig_giorno, use_container_width=True)
         with col2:
             fig_settimana = go.Figure(go.Pie(
@@ -332,7 +332,7 @@ if authentication_status:
                 hole=0.6, marker_colors=["#007A87", "#E0E0E0"], textinfo="none"))
             fig_settimana.update_layout(title="📅 Ultimi 7 giorni",
                                         annotations=[dict(text=f"{progresso_settimana*100:.0f}%", x=0.5, y=0.5, font_size=22, showarrow=False)],
-                                        showlegend=False, height=500)
+                                        showlegend=False, height=400)
             st.plotly_chart(fig_settimana, use_container_width=True)
 
         # --- INFO ---
