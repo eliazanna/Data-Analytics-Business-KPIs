@@ -275,12 +275,16 @@ if authentication_status:
         vendite_df = get_data(vendite_ws)
 
         if "Timestamp" in vendite_df.columns:
+            vendite_df["Timestamp"] = vendite_df["Timestamp"].astype(str).str.strip()
+
             vendite_df["Timestamp"] = vendite_df["Timestamp"].apply(
-                lambda x: parser.parse(str(x)) if pd.notna(x) and str(x).strip() != "" else pd.NaT
+                lambda x: pd.to_datetime(x, format="%d/%m/%Y %H:%M", errors="coerce")
             )
+
             vendite_df["Timestamp"] = vendite_df["Timestamp"].dt.tz_localize(None)
         else:
             vendite_df["Timestamp"] = pd.NaT
+
 
         italy_tz = pytz.timezone("Europe/Rome")
         oggi = datetime.now(italy_tz).date()
