@@ -61,7 +61,6 @@ if authentication_status:
     # -------------------------------
        
     # --- SIDEBAR NAVIGAZIONE ---
-    st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2550/2550266.png", width=80)
     st.sidebar.markdown("## 💼 Gestione Società")
 
     # Menu statico in verticale
