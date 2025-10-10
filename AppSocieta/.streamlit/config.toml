@@ -1,7 +1,7 @@
 [theme]
-base="light"
-primaryColor="#00B894"
-secondaryBackgroundColor="#E8F5E9"
-backgroundColor="#F9FAFB"
-textColor="#1E272E"
-font="sans serif"
+base = "light"
+primaryColor = "#00B894"             # Verde principale (bottoni, link)
+backgroundColor = "#E8F5E9"          # Verde chiarissimo come sfondo generale
+secondaryBackgroundColor = "#FFFFFF" # Box bianchi (tab, schede, metriche)
+textColor = "#1E272E"                # Testo grigio scuro
+font = "sans serif"
