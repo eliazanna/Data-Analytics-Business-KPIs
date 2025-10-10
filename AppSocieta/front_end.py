@@ -353,7 +353,7 @@ if authentication_status:
         
         st.dataframe(analisi, use_container_width=True)
 
-        king = analisi.loc[analisi["Plusvalenza media (%)"].idxmax(), "Venditore"]
+        king = analisi.loc[analisi["Plusvalenza media (%)"].idxmax(), "Venditore"].str.lower()
         gain = analisi["Plusvalenza media (%)"].max()
         st.success(f"👑 King della vendita: **{king}** con una plusvalenza media del **{gain:.2f}%**")
 
