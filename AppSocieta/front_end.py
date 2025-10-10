@@ -90,8 +90,7 @@ if authentication_status:
                     st.rerun()
                 except ValueError:
                     st.warning("⚠️ Inserisci un numero valido per il prezzo (es. 4,50 o 10,00).")
-        else:
-            st.warning("⚠️ Inserisci almeno nome e prezzo.")
+       
 
     # -------------------------------
     # 🧾 TAB 2: VENDITE
