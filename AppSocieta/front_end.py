@@ -267,7 +267,8 @@ if authentication_status:
         # --- Ricarica dati live ---
         if st.button("🔄 Aggiorna dati vendite", type="secondary"):
             st.cache_data.clear()
-            st.experimental_rerun()
+            st.rerun()
+
 
         # --- PREPARAZIONE DATI ---
         prodotti_df = get_data(prodotti_ws)
