@@ -10,30 +10,6 @@ st.set_page_config(
     layout="wide"   
 )
 
-st.markdown("""
-<style>
-/* ---------- Etichetta "Menu" accanto all’icona hamburger ---------- */
-
-/* Selettore del pulsante dell’hamburger */
-button[kind="header"]::after {
-    content: "  Menu";
-    color: #2D3436;
-    font-weight: 600;
-    font-size: 15px;
-    vertical-align: middle;
-}
-
-/* Se l’icona è nascosta o cambiata di posizione, forza la visibilità */
-[data-testid="collapsedControl"] button::after {
-    content: "  Menu";
-    color: #2D3436;
-    font-weight: 600;
-    font-size: 15px;
-    vertical-align: middle;
-}
-</style>
-""", unsafe_allow_html=True)
-
 
 # --- CREDENZIALI ---
 names = ["Elia Zanini", "Tommaso"]
