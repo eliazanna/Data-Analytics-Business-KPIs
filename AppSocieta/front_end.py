@@ -259,7 +259,13 @@ if authentication_status:
         import plotly.graph_objects as go
         from datetime import datetime, timedelta
         import pytz
-        from dateutil import parser
+
+        prodotti_df = get_data(prodotti_ws)
+        vendite_df_all = get_data(vendite_ws)
+
+        # Filtra le vendite dell' utente loggato
+        current_user = username
+        vendite_df = vendite_df_all[vendite_df_all["Venditore"] == current_user]
 
         st.markdown("## 📊 Dashboard venditore")
         st.caption("🎯 Obiettivi personali di vendita – monitoraggio giornaliero e settimanale")
