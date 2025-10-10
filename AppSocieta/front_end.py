@@ -39,7 +39,7 @@ name, authentication_status, username = authenticator.login("Login", "sidebar")
 if authentication_status:
     # ✅ SOLO GLI UTENTI AUTENTICATI POSSONO VEDERE DA QUI IN POI
     st.sidebar.success(f"✅ Benvenuto {name}!")
-    authenticator.logout("Logout", "sidebar")
+    authenticator.logout("Logout", "main")
 
     # Tutta la tua app va qui ↓↓↓
     st.title("💼 Gestione Società - Elia & Tommy")
