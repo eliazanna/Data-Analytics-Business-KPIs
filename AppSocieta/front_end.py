@@ -2,7 +2,40 @@ import streamlit as st
 from app import prodotti_ws, vendite_ws
 from data_utils import get_data, add_row, calcola_bilancio, aggiorna_inventario
 import pandas as pd
+import streamlit_authenticator as stauth
 
+# --- CREDENZIALI ---
+users = {
+    "Elia": {
+        "name": "elia_zanna",
+        "password": "sonoilre"
+    },
+    "Tommy": {
+        "name": "tom_zanna",
+        "password": "sonounservofedele"
+    }
+}
+
+authenticator = stauth.Authenticate(
+    {u: {"name": users[u]["name"], "password": stauth.Hasher([users[u]["password"]]).generate()[0]}
+     for u in users},
+    "societa_app_cookie",   # nome del cookie
+    "chiavefirma123",       # chiave segreta
+    cookie_expiry_days=30
+)
+
+# --- LOGIN ---
+name, authentication_status, username = authenticator.login("Login", "main")
+
+if authentication_status == False:
+    st.error("❌ Username o password errati")
+
+if authentication_status == None:
+    st.warning("🔐 Inserisci le credenziali per accedere")
+
+if authentication_status:
+    st.sidebar.success(f"✅ Benvenuto {name}!")
+    authenticator.logout("Logout", "sidebar")
 # -------------------------------
 # 🎨 CONFIGURAZIONE BASE
 # -------------------------------
