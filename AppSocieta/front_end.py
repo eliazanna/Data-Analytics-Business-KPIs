@@ -185,6 +185,24 @@ if authentication_status:
         # Countdown al pareggio
         st.divider()
         st.metric("🎯 Mancano al pareggio", f"€ {b['pareggio']:.2f}")
+        # --- PROGRESS BAR VERSO IL PAREGGIO ---
+        totale_spese = b["totale_spese"]
+        totale_entrate = b["totale_entrate"]
+
+        # Evita divisioni per zero
+        if totale_spese > 0:
+            progresso = min(totale_entrate / totale_spese, 1.0)
+        else:
+            progresso = 0
+
+        # Testo dinamico in base al progresso
+        if progresso < 1:
+            st.markdown(f"### 📊 Avanzamento verso il pareggio: **{progresso*100:.1f}%**")
+            st.progress(progresso)
+        else:
+            st.markdown("### 🥳 Pareggio raggiunto!")
+            st.balloons()
+
 
     # -------------------------------
     # 📈 TAB 4: KING DELLA VENDITA
