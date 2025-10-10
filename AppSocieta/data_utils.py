@@ -292,7 +292,7 @@ def inventario_aggregato(df_prodotti, df_vendite):
         .groupby("Nome")
         .apply(lambda x: pd.Series({
             "Quantità iniziale": x["Quantita"].sum(),
-            "Costo medio (€)": (x["Prezzo_unitario"] * x["Quantita"]).sum() / x["Quantita"].sum()
+            "Costo medio unitario(€)": (x["Prezzo_unitario"] * x["Quantita"]).sum() / x["Quantita"].sum()
             if x["Quantita"].sum() > 0 else 0
         }))
         .reset_index()
@@ -332,7 +332,7 @@ def inventario_aggregato(df_prodotti, df_vendite):
     grouped["Quantità residua"] = (grouped["Quantità iniziale"] - grouped["Quantità venduta"]).clip(lower=0)
 
     # --- Arrotondamenti ---
-    grouped["Costo medio (€)"] = grouped["Costo medio (€)"].round(2)
+    grouped["Costo medio unitario(€)"] = grouped["Costo medio unitario(€)"].round(2)
     grouped["Prezzo medio vendita (€)"] = grouped["Prezzo medio vendita (€)"].round(2)
 
     # --- Riordina colonne (Quantità residua prima) ---
@@ -340,7 +340,7 @@ def inventario_aggregato(df_prodotti, df_vendite):
         "Nome",
         "Quantità residua",
         "Quantità iniziale",
-        "Costo medio (€)",
+        "Costo medio unitario(€)",
         "Prezzo medio vendita (€)",
         "Quantità venduta"
     ]]
