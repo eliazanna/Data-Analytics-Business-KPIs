@@ -223,6 +223,10 @@ def analisi_vendite(df_prodotti, df_vendite):
 
     df_prodotti = df_prodotti.copy()
     df_vendite = df_vendite.copy()
+   
+    if "Nome" in df_prodotti.columns and "Prodotto" not in df_prodotti.columns:
+        df_prodotti = df_prodotti.rename(columns={"Nome": "Prodotto"})
+
 
     # pulizia
     df_prodotti["Prezzo_unitario"] = df_prodotti["Prezzo_unitario"].apply(_clean_price)
@@ -255,7 +259,7 @@ def analisi_vendite(df_prodotti, df_vendite):
             nome = str(r["Prodotto"]).strip()
             qta = r["Quantita"]
             prezzo_vendita = float(r["Prezzo_totale_vendita"])
-            prezzo_acquisto = df_prodotti.loc[df_prodotti["Nome"] == nome, "Prezzo_unitario"]
+            prezzo_acquisto = df_prodotti.loc[df_prodotti["Prodotto"] == nome, "Prezzo_unitario"]
 
             if not prezzo_acquisto.empty:
                 costo = float(prezzo_acquisto.values[0]) * qta
