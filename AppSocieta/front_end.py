@@ -98,7 +98,7 @@ if authentication_status:
     from data_utils import registra_vendita_multipla
 
     with tab2:
-        st.subheader("🧾 Registra vendita multipla")
+        st.subheader("🧾 Registra nuovo ordine")
 
         prodotti_df = get_data(prodotti_ws)
         nomi_prodotti = sorted(prodotti_df["Nome"].unique().tolist())
@@ -112,7 +112,7 @@ if authentication_status:
         for p in prodotti_scelti:
             quantita_vendute[p] = st.number_input(f"Quantità per {p}", min_value=1, step=1, key=p)
 
-        if st.button("Registra vendita multipla", type="primary"):
+        if st.button("Registra", type="primary"):
             if prodotti_scelti and prezzo_totale > 0:
                 vendite_generate, inventario_aggiornato = registra_vendita_multipla(
                     prodotti_df, quantita_vendute, prezzo_totale, venditore
