@@ -5,11 +5,7 @@ import pandas as pd
 import streamlit_authenticator as stauth
 
 
-st.set_page_config(
-    page_title="Gestione Società - Elia & Tommy",
-    page_icon="💼",
-    layout="wide"
-)
+
 
 # --- CREDENZIALI ---
 usernames = ["Elia", "Tommy"]
@@ -18,7 +14,8 @@ passwords = [
     st.secrets.get("auth", {}).get("elia_password", "placeholder_elia"),
     st.secrets.get("auth", {}).get("tommy_password", "placeholder_tommy")
 ]
-
+st.write("DEBUG - Passwords list:", passwords)
+st.write("DEBUG - Types:", [type(p) for p in passwords])
 hashed_passwords = stauth.Hasher(passwords).generate()
 
 # --- LOGIN CONFIG ---
