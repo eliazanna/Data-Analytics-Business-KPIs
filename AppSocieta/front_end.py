@@ -1,13 +1,13 @@
 import streamlit as st
 from app import prodotti_ws, vendite_ws
-from data_utils import registra_vendita_multipla, analisi_vendite, get_data, add_row, calcola_bilancio, aggiorna_inventario
+from data_utils import registra_vendita_multipla,inventario_aggregato, analisi_vendite, get_data, add_row, calcola_bilancio, aggiorna_inventario
 import pandas as pd
 import streamlit_authenticator as stauth
 
 st.set_page_config(
     page_title="Gestione Società - Elia & Tommy",
     page_icon="💼",
-    layout="wide"   # <--- importantissimo
+    layout="wide"   
 )
 
 # --- CREDENZIALI ---
@@ -59,7 +59,20 @@ if authentication_status:
     # -------------------------------
     # 📦 TAB 1: INVENTARIO
     # -------------------------------
-    from data_utils import inventario_aggregato
+       
+    # --- SIDEBAR NAVIGAZIONE ---
+    st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2550/2550266.png", width=80)
+    st.sidebar.markdown("## 💼 Gestione Società")
+
+    # Menu statico in verticale
+    menu = st.sidebar.radio(
+        "Navigazione",
+        ["📦 Inventario", "🧾 Vendite", "💰 Bilancio", "📈 King della Vendita"],
+        index=0,   # pagina predefinita (Inventario)
+        key="menu_choice"
+    )
+
+
 
     if menu== "📦 Inventario":
         st.subheader("📦 Inventario reale aggregato")
