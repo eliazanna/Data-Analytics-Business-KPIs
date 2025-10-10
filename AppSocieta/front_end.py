@@ -45,17 +45,6 @@ if authentication_status:
     st.title("💼 Gestione Società - Elia & Tommy")
     st.caption("Dashboard condivisa per gestire spese, vendite e saldi in tempo reale")
 
-
-    # --- MENU LATERALE ---
-    st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2550/2550266.png", width=80)
-    st.sidebar.markdown("## 💼 Gestione Società")
-
-    menu = st.sidebar.selectbox(
-        "Navigazione:",
-        ["📦 Inventario", "🧾 Vendite", "💰 Bilancio", "📈 King della Vendita"]
-    )
-
-
     # -------------------------------
     # 📦 TAB 1: INVENTARIO
     # -------------------------------
