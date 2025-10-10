@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#00B894"         # Colore principale (pulsanti, link)
+backgroundColor = "#F9FAFB"      # Sfondo principale
+secondaryBackgroundColor = "#FFFFFF"  # Colonne e box
+textColor = "#2D3436"            # Testo
+font = "sans serif"              # sans serif | serif | monospace
