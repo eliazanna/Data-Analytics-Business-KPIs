@@ -279,7 +279,7 @@ def inventario_aggregato(df_prodotti, df_vendite):
     if df_prodotti.empty:
         return pd.DataFrame(columns=[
             "Prodotto", "Quantità residua", "Quantità iniziale",
-            "Costo medio (€)", "Prezzo medio vendita (€)", "Quantità venduta"
+            "Costo medio unitario(€)", "Prezzo medio vendita (€)", "Quantità venduta"
         ])
 
     df_prodotti = df_prodotti.copy()
