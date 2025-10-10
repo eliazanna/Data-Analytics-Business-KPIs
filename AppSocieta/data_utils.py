@@ -351,10 +351,11 @@ def inventario_aggregato(df_prodotti, df_vendite):
 
 
 def send_telegram_message(text):
-    """Invia una notifica Telegram usando i secrets di Streamlit"""
+    """Invia una notifica Telegram a tutti gli utenti configurati"""
     try:
         bot_token = st.secrets["telegram"]["bot_token"]
-        chat_id = st.secrets["telegram"]["chat_id"]
+        chat_ids = st.secrets["telegram"]["chat_ids"]
+        print("🔍 Secrets letti:", bot_token[:10], chat_ids)
 
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload_base = {"text": text, "parse_mode": "HTML"}
@@ -362,11 +363,11 @@ def send_telegram_message(text):
         for chat_id in chat_ids:
             payload = payload_base | {"chat_id": chat_id}
             response = requests.post(url, data=payload, timeout=10)
+            print(f"📤 Invio a {chat_id}: {response.status_code} - {response.text}")
             if response.status_code != 200:
-                print(f"⚠️ Errore Telegram ({chat_id}):", response.text)
-            else:
-                print(f"✅ Messaggio Telegram inviato a {chat_id}")
+                st.warning(f"⚠️ Telegram error ({chat_id}): {response.text}")
     except Exception as e:
         print("❌ Errore Telegram:", e)
+        st.warning(f"Errore Telegram: {e}")
         
 
