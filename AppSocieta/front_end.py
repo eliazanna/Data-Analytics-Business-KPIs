@@ -273,16 +273,21 @@ if authentication_status:
 
 
         if "Timestamp" in vendite_df.columns:
-            vendite_df["Timestamp"] = vendite_df["Timestamp"].astype(str).str.strip()
-
-            vendite_df["Timestamp"] = vendite_df["Timestamp"].apply(
-                lambda x: pd.to_datetime(x, format="%d/%m/%Y %H:%M", errors="coerce")
+            # Rimuove spazi e converte tutto in datetime (senza crash)
+            vendite_df["Timestamp"] = (
+                pd.to_datetime(vendite_df["Timestamp"].astype(str).str.strip(), 
+                            format="%d/%m/%Y %H:%M", 
+                            errors="coerce")
             )
 
-            vendite_df["Timestamp"] = vendite_df["Timestamp"].dt.tz_localize(None)
+            # Applica .dt solo se la conversione ha funzionato
+            if pd.api.types.is_datetime64_any_dtype(vendite_df["Timestamp"]):
+                vendite_df["Timestamp"] = vendite_df["Timestamp"].dt.tz_localize(None)
+            else:
+                st.warning("⚠️ I timestamp non sono stati riconosciuti come datetime.")
+                st.write(vendite_df["Timestamp"].head())
         else:
             vendite_df["Timestamp"] = pd.NaT
-
 
         italy_tz = pytz.timezone("Europe/Rome")
         oggi = datetime.now(italy_tz).date()
