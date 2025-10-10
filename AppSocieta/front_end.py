@@ -57,11 +57,9 @@ if authentication_status:
 
         prodotti_df = get_data(prodotti_ws)
         vendite_df = get_data(vendite_ws)
-
         inventario_df = inventario_aggregato(prodotti_df, vendite_df)
 
         st.dataframe(inventario_df, use_container_width=True)
-
         st.caption("⚙️ Costo medio e prezzo medio calcolati automaticamente in base alle vendite e agli acquisti.")
 
 
@@ -77,12 +75,23 @@ if authentication_status:
             comprato_da = st.selectbox("Comprato da", ["Elia", "Tommy"])
 
         if st.button("Aggiungi prodotto", type="primary", use_container_width=True):
-            if nome and prezzo:
-                add_row(prodotti_ws, [nome, prezzo, quantita, comprato_da])
-                st.success(f"✅ Prodotto **{nome}** aggiunto correttamente!")
-                st.rerun()
-            else:
-                st.warning("⚠️ Inserisci almeno nome e prezzo.")
+            if nome and prezzo_input:
+                try:
+                    # 🔹 Normalizza il prezzo (converte "4,5" -> 4.5)
+                    prezzo_norm = prezzo_input.replace(",", ".").strip()
+                    prezzo_float = float(prezzo_norm)
+                    prezzo_format = f"€ {prezzo_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                    # 👆 converte in formato europeo (4.5 -> "€ 4,50")
+
+                    # Aggiungi la riga a Google Sheets
+                    add_row(prodotti_ws, [nome, prezzo_format, quantita, comprato_da])
+
+                    st.success(f"✅ Prodotto **{nome}** aggiunto correttamente con prezzo {prezzo_format}!")
+                    st.rerun()
+                except ValueError:
+                    st.warning("⚠️ Inserisci un numero valido per il prezzo (es. 4,50 o 10,00).")
+        else:
+            st.warning("⚠️ Inserisci almeno nome e prezzo.")
 
     # -------------------------------
     # 🧾 TAB 2: VENDITE
