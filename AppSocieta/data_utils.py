@@ -6,16 +6,30 @@ import streamlit as st
 # 🧹 Pulizia prezzi
 # ---------------------------------------------------
 def _clean_price(val):
-    """Rimuove simboli di valuta, spazi e converte virgole in punti."""
+    """Pulisce il valore di prezzo rimuovendo simboli, spazi e separatori migliaia/decimali in stile IT."""
     if pd.isna(val):
         return 0.0
-    val = str(val)
-    val = re.sub(r"[^\d,.-]", "", val)
-    val = val.replace(",", ".")
+    val = str(val).strip()
+
+    # Rimuove simboli non numerici, tranne . , - 
+    val = re.sub(r"[^\d,.\-]", "", val)
+
+    # Caso comune: "1.500,00" → rimuove i punti come migliaia, poi sostituisce la virgola in punto
+    if "," in val and "." in val:
+        # Se c'è sia punto che virgola, il punto è separatore migliaia
+        val = val.replace(".", "").replace(",", ".")
+    elif "," in val and "." not in val:
+        # Solo virgola → formato europeo (es. 10,5)
+        val = val.replace(",", ".")
+    elif "." in val and "," not in val:
+        # Solo punto → formato inglese
+        pass
+
     try:
         return float(val)
     except ValueError:
         return 0.0
+
 
 
 # ---------------------------------------------------
