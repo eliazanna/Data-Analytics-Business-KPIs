@@ -187,7 +187,7 @@ if authentication_status:
 
             # Ordina per data (più recente in alto) e numerazione Ordine #1, #2, ...
             ordini["_ts"] = pd.to_datetime(ordini["Timestamp"], format="%d/%m/%Y %H:%M", errors="coerce")
-            ordini = ordini.sort_values("_ts", ascending=False).reset_index(drop=True)
+            ordini = ordini.sort_values("_ts", ascending=True).reset_index(drop=True)
             ordini.insert(0, "Ordine #", ordini.index + 1)
             ordini["Ordine #"] = ordini["Ordine #"].apply(lambda i: f"Ordine #{i}")
             ordini["Totale (€)"] = ordini["Totale"].round(2)
