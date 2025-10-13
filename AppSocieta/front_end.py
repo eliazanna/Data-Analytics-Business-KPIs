@@ -5,8 +5,6 @@ import pandas as pd
 import streamlit_authenticator as stauth
 
 st.set_page_config(
-    page_title="Gestione Società - Elia & Tommy",
-    page_icon="💼",
     layout="wide"   
 )
 
