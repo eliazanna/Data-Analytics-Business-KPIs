@@ -55,7 +55,7 @@ if authentication_status:
     # Menu statico in verticale
     menu = st.sidebar.radio(
         "Navigazione",
-        ["📈 Dashboard Venditore","💰 Bilancio", "📦 Inventario", "🧾 Vendite"],
+        ["📈 Dashboard Venditore","💰 Bilancio", "🧾 Vendite", "📦 Inventario"],
         index=0,   # pagina predefinita (Inventario)
         key="menu_choice"
     )
