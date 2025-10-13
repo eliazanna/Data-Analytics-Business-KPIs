@@ -206,7 +206,7 @@ if authentication_status:
 
             # Se vuoi mostrare solo le info principali richieste:
             cols = ["Ordine #", "Venditore", "Timestamp", "Totale (€)"]
-            st.dataframe(ordini[cols], use_container_width=True)
+            st.dataframe(ordini[cols], use_container_width=True, hide_index=True)
 
             # (Opzionale) Expanders con il dettaglio dei prodotti per ogni ordine
             with st.expander("Mostra dettaglio prodotti per ogni ordine"):
@@ -215,7 +215,7 @@ if authentication_status:
                     dettaglio = vendite_storico.loc[mask, ["Prodotto", "Quantita", "Prezzo_totale_vendita"]].copy()
                     dettaglio["Prezzo_totale_vendita"] = dettaglio["Prezzo_totale_vendita"].round(2)
                     st.write(f"**{row['Ordine #']}** – {row['Venditore']} – {row['Timestamp']} – Totale: € {row['Totale (€)']:.2f}")
-                    st.dataframe(dettaglio.rename(columns={"Prezzo_totale_vendita": "Quota ricavo (€)"}), use_container_width=True)
+                    st.dataframe(dettaglio.rename(columns={"Prezzo_totale_vendita": "Quota ricavo (€)"}), use_container_width=True, hide_index=True)
 
 
     # -------------------------------
