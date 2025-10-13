@@ -153,6 +153,57 @@ if authentication_status:
                 st.rerun()
             else:
                 st.warning("⚠️ Seleziona almeno un prodotto e inserisci un prezzo totale.")
+        
+        # -------------------------------
+        # 📜 Storico ordini (raggruppati)
+        # -------------------------------
+        st.markdown("---")
+        st.markdown("### 📜 Ordini precedenti")
+
+        vendite_storico = get_data(vendite_ws)
+
+        if vendite_storico.empty:
+            st.info("Nessun ordine registrato.")
+        else:
+            # Pulizia base
+            vendite_storico = vendite_storico.copy()
+            vendite_storico["Venditore"] = (
+                vendite_storico["Venditore"].astype(str).str.strip().str.capitalize()
+            )
+            vendite_storico["Timestamp"] = vendite_storico.get("Timestamp", "").astype(str).str.strip()
+            vendite_storico["Prezzo_totale_vendita"] = vendite_storico["Prezzo_totale_vendita"].apply(_clean_price)
+            vendite_storico["Quantita"] = pd.to_numeric(vendite_storico["Quantita"], errors="coerce").fillna(0).astype(int)
+
+            # Raggruppa per ordine: (Venditore, Timestamp)
+            ordini = (
+                vendite_storico
+                .groupby(["Venditore", "Timestamp"], as_index=False)
+                .agg(
+                    Articoli=("Prodotto", "count"),             # quante righe/prodotti ha l'ordine
+                    Pezzi=("Quantita", "sum"),                  # somma quantità
+                    Totale=("Prezzo_totale_vendita", "sum")     # somma quote ricavo = totale ordine
+                )
+            )
+
+            # Ordina per data (più recente in alto) e numerazione Ordine #1, #2, ...
+            ordini["_ts"] = pd.to_datetime(ordini["Timestamp"], format="%d/%m/%Y %H:%M", errors="coerce")
+            ordini = ordini.sort_values("_ts", ascending=False).reset_index(drop=True)
+            ordini.insert(0, "Ordine #", ordini.index + 1)
+            ordini["Ordine #"] = ordini["Ordine #"].apply(lambda i: f"Ordine #{i}")
+            ordini["Totale (€)"] = ordini["Totale"].round(2)
+
+            # Se vuoi mostrare solo le info principali richieste:
+            cols = ["Ordine #", "Venditore", "Timestamp", "Totale (€)"]
+            st.dataframe(ordini[cols], use_container_width=True)
+
+            # (Opzionale) Expanders con il dettaglio dei prodotti per ogni ordine
+            with st.expander("Mostra dettaglio prodotti per ogni ordine"):
+                for _, row in ordini.iterrows():
+                    mask = (vendite_storico["Venditore"] == row["Venditore"]) & (vendite_storico["Timestamp"] == row["Timestamp"])
+                    dettaglio = vendite_storico.loc[mask, ["Prodotto", "Quantita", "Prezzo_totale_vendita"]].copy()
+                    dettaglio["Prezzo_totale_vendita"] = dettaglio["Prezzo_totale_vendita"].round(2)
+                    st.write(f"**{row['Ordine #']}** – {row['Venditore']} – {row['Timestamp']} – Totale: € {row['Totale (€)']:.2f}")
+                    st.dataframe(dettaglio.rename(columns={"Prezzo_totale_vendita": "Quota ricavo (€)"}), use_container_width=True)
 
 
     # -------------------------------
