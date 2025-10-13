@@ -159,44 +159,13 @@ if authentication_status:
     # 💰 TAB 3: BILANCIO
     # -------------------------------
     elif menu=="💰 Bilancio":
-        st.subheader("💰 Bilancio 50/50")
+        st.subheader("💰 Bilancio")
 
         prodotti_df = get_data(prodotti_ws)
         vendite_df = get_data(vendite_ws)
         b = calcola_bilancio(prodotti_df, vendite_df)
 
-        st.divider()
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Spese Elia", f"€ {b['spesa_elia']:.2f}")
-            st.metric("Entrate Elia", f"€ {b['entrate_elia']:.2f}")
-        with col2:
-            st.metric("Spese Tommy", f"€ {b['spesa_tommy']:.2f}")
-            st.metric("Entrate Tommy", f"€ {b['entrate_tommy']:.2f}")
-
-        st.divider()
-        col3, col4 = st.columns(2)
-        with col3:
-            st.metric("Totale Spese", f"€ {b['totale_spese']:.2f}")
-        with col4:
-            st.metric("Totale Entrate", f"€ {b['totale_entrate']:.2f}")
-
-        st.divider()
-
-        # Mostra chi deve a chi
-        saldo_elia = b["saldo_elia"]
-        saldo_tommy = b["saldo_tommy"]
-
-        if saldo_elia > 0:
-            st.success(f"💸 Tommy deve a Elia: **€ {saldo_elia:.2f}**")
-        elif saldo_elia < 0:
-            st.error(f"💸 Elia deve a Tommy: **€ {abs(saldo_elia):.2f}**")
-        else:
-            st.info("✅ I conti sono perfettamente in pari!")
-
-        st.caption(f"Saldo Elia: € {saldo_elia:.2f}  |  Saldo Tommy: € {saldo_tommy:.2f}")
-
-        # Countdown al pareggio
+                # Countdown al pareggio
         st.divider()
 
         # --- BILANCIO GLOBALE E AVANZAMENTO ---
@@ -250,6 +219,39 @@ if authentication_status:
             if not st.session_state.pareggio_festeggiato:
                 st.balloons()
                 st.session_state.pareggio_festeggiato = True
+
+        st.divider()
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Spese Elia", f"€ {b['spesa_elia']:.2f}")
+            st.metric("Entrate Elia", f"€ {b['entrate_elia']:.2f}")
+        with col2:
+            st.metric("Spese Tommy", f"€ {b['spesa_tommy']:.2f}")
+            st.metric("Entrate Tommy", f"€ {b['entrate_tommy']:.2f}")
+
+        st.divider()
+        col3, col4 = st.columns(2)
+        with col3:
+            st.metric("Totale Spese", f"€ {b['totale_spese']:.2f}")
+        with col4:
+            st.metric("Totale Entrate", f"€ {b['totale_entrate']:.2f}")
+
+        st.divider()
+
+        # Mostra chi deve a chi
+        saldo_elia = b["saldo_elia"]
+        saldo_tommy = b["saldo_tommy"]
+
+        if saldo_elia > 0:
+            st.success(f"💸 Tommy deve a Elia: **€ {saldo_elia:.2f}**")
+        elif saldo_elia < 0:
+            st.error(f"💸 Elia deve a Tommy: **€ {abs(saldo_elia):.2f}**")
+        else:
+            st.info("✅ I conti sono perfettamente in pari!")
+
+        st.caption(f"Saldo Elia: € {saldo_elia:.2f}  |  Saldo Tommy: € {saldo_tommy:.2f}")
+
+
 
     # -------------------------------
     # 📈 TAB 4: KING DELLA VENDITA
