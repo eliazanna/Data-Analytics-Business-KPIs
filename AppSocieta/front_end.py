@@ -214,7 +214,7 @@ if authentication_status:
                     mask = (vendite_storico["Venditore"] == row["Venditore"]) & (vendite_storico["Timestamp"] == row["Timestamp"])
                     dettaglio = vendite_storico.loc[mask, ["Prodotto", "Quantita", "Prezzo_totale_vendita"]].copy()
                     dettaglio["Prezzo_totale_vendita"] = dettaglio["Prezzo_totale_vendita"].round(2)
-                    st.write(f"**{row['Ordine #']}** – {row['Venditore']} – {row['Timestamp']} – Totale: € {row['Totale (€)']:.2f}")
+                    st.write(f"**#{row['Ordine #']}** : {row['Venditore']} – {row['Timestamp']} – Totale: € {row['Totale (€)']:.2f}")
                     st.dataframe(dettaglio.rename(columns={"Prezzo_totale_vendita": "Quota ricavo (€)"}), use_container_width=True, hide_index=True)
 
 
