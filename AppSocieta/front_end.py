@@ -5,6 +5,8 @@ import pandas as pd
 import streamlit_authenticator as stauth
 
 st.set_page_config(
+    page_title="Gestione Società - Elia & Tommy",
+    page_icon="💼",
     layout="wide"   
 )
 
@@ -41,8 +43,7 @@ if authentication_status:
     authenticator.logout("Logout", "main")
 
     # Tutta la tua app va qui ↓↓↓
-    st.title("💼 Gestione Società - Elia & Tommy")
-    st.caption("Dashboard condivisa per gestire spese, vendite e saldi in tempo reale")
+
 
     # -------------------------------
     # 📦 TAB 1: INVENTARIO
@@ -54,7 +55,7 @@ if authentication_status:
     # Menu statico in verticale
     menu = st.sidebar.radio(
         "Navigazione",
-        ["📦 Inventario", "🧾 Vendite", "💰 Bilancio", "📈 Dashboard Venditore"],
+        ["📈 Dashboard Venditore","💰 Bilancio", "📦 Inventario", "🧾 Vendite"],
         index=0,   # pagina predefinita (Inventario)
         key="menu_choice"
     )
