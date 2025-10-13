@@ -187,10 +187,22 @@ if authentication_status:
 
             # Ordina per data (più recente in alto) e numerazione Ordine #1, #2, ...
             ordini["_ts"] = pd.to_datetime(ordini["Timestamp"], format="%d/%m/%Y %H:%M", errors="coerce")
-            ordini = ordini.sort_values("_ts", ascending=True).reset_index(drop=True)
-            ordini.insert(0, "Ordine #", ordini.index + 1)
-            ordini["Ordine #"] = ordini["Ordine #"].apply(lambda i: f"Ordine #{i}")
+            ordini = ordini.sort_values("_ts", ascending=False).reset_index(drop=True)
+            # parsing del timestamp
+            ordini["_ts"] = pd.to_datetime(
+                ordini["Timestamp"], format="%d/%m/%Y %H:%M", errors="coerce")
+
+            # 1) NUMERAZIONE: il più vecchio è Ordine #1
+            idx_valid = ordini.dropna(subset=["_ts"]).sort_values("_ts", ascending=True).index
+            ordini.loc[idx_valid, "Ordine #"] = range(1, len(idx_valid) + 1)
+
+            # 2) VISUALIZZAZIONE: metti i più recenti in alto
+            ordini = ordini.sort_values("_ts", ascending=False).reset_index(drop=True)
+
+            # formato colonne
+            ordini["Ordine #"] = ordini["Ordine #"].astype(int)
             ordini["Totale (€)"] = ordini["Totale"].round(2)
+
 
             # Se vuoi mostrare solo le info principali richieste:
             cols = ["Ordine #", "Venditore", "Timestamp", "Totale (€)"]
