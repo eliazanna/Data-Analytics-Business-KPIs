@@ -217,7 +217,7 @@ if authentication_status:
     # 💰 TAB 3: BILANCIO
     # -------------------------------
     elif menu == "💰 Bilancio":
-        st.subheader("💰 Bilancio 50/50 (con spese extra)")
+        st.subheader("💰 Bilancio")
 
         ensure_headers(spese_ws, ["Descrizione", "Costo", "Chi", "Timestamp"])
 
