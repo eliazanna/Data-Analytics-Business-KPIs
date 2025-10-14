@@ -452,15 +452,12 @@ if authentication_status:
         st.markdown("---")
         st.markdown("### 🧮 Confronto vendite tra Elia e Tommy")
 
-        # Normalizza la colonna "Venditore" in minuscolo per coerenza
-        vendite_df_all["Venditore"] = vendite_df_all["Venditore"].astype(str).str.strip().str.lower()
+        # ⚠️ NON ricreare analisi senza le spese: usa quella calcolata sopra
+        # analisi = analisi_vendite(prodotti_df, vendite_df_all, spese_df_all)
 
-        analisi = analisi_vendite(prodotti_df, vendite_df_all)
-        
         if analisi.empty:
             st.info("📊 Nessuna vendita registrata al momento.")
         else:
-            # Mostra tabella formattata
             st.dataframe(
                 analisi.style.format({
                     "Ricavo totale (€)": "€ {:.2f}",
@@ -470,12 +467,11 @@ if authentication_status:
                     "Plusvalenza media (%)": "{:.1f}%"
                 }),
                 use_container_width=True
-)
-        
+            )
 
             # Identifica il "King della vendita"
             king_row = analisi.loc[analisi["Plusvalenza media (%)"].idxmax()]
-            king = str(king_row["Venditore"]).capitalize()  # ✅ rende la prima lettera maiuscola
+            king = str(king_row["Venditore"]).capitalize()
             gain = king_row["Plusvalenza media (%)"]
-
             st.success(f"👑 King della vendita: **{king}** con una plusvalenza media del **{gain:.2f}%**")
+
