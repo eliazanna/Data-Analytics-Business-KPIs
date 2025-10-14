@@ -3,6 +3,7 @@ from app import prodotti_ws, vendite_ws, spese_ws
 from data_utils import _clean_price, registra_vendita_multipla,inventario_aggregato, analisi_vendite, get_data, add_row, calcola_bilancio, aggiorna_inventario, ensure_headers
 import pandas as pd
 import streamlit_authenticator as stauth
+from datetime import datetime, timedelta  
 
 st.set_page_config(
     page_title="Gestione Società - Elia & Tommy",
