@@ -31,6 +31,14 @@ def _clean_price(val):
     except ValueError:
         return 0.0
 
+def ensure_headers(ws, headers):
+    """Se il worksheet è vuoto, scrive le intestazioni una volta sola."""
+    try:
+        vals = ws.get_all_values()
+        if not vals:
+            ws.append_row(headers)
+    except Exception as e:
+        print("Errore ensure_headers:", e)
 
 
 # ---------------------------------------------------

@@ -1,6 +1,6 @@
 import streamlit as st
 from app import prodotti_ws, vendite_ws, spese_ws
-from data_utils import _clean_price, registra_vendita_multipla,inventario_aggregato, analisi_vendite, get_data, add_row, calcola_bilancio, aggiorna_inventario
+from data_utils import _clean_price, registra_vendita_multipla,inventario_aggregato, analisi_vendite, get_data, add_row, calcola_bilancio, aggiorna_inventario, ensure_headers
 import pandas as pd
 import streamlit_authenticator as stauth
 
@@ -87,25 +87,19 @@ if authentication_status:
         if st.button("Aggiungi prodotto", type="primary", use_container_width=True):
             if nome and prezzo_input:
                 try:
-                    # 🔹 Normalizza il prezzo (converte "4,5" -> 4.5)
+                    # normalizza prezzo
                     prezzo_norm = prezzo_input.replace(",", ".").strip()
                     prezzo_float = float(prezzo_norm)
                     prezzo_format = f"€ {prezzo_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                    # 👆 converte in formato europeo (4.5 -> "€ 4,50")
 
-                    # Aggiungi la riga a Google Sheets
-                    from datetime import datetime
-
-                    # Aggiungi la data/ora locale formattata
+                    # intestazioni attese: Nome, Prezzo_unitario, Quantita, Comprato_da, Timestamp
                     timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
-                    add_row(vendite_ws, [vendita_nome, vendita_qta, prezzo_vendita, venditore, timestamp])
-
+                    add_row(prodotti_ws, [nome, prezzo_format, int(quantita), comprato_da, timestamp])
 
                     st.success(f"✅ Prodotto **{nome}** aggiunto correttamente con prezzo {prezzo_format}!")
                     st.rerun()
                 except ValueError:
                     st.warning("⚠️ Inserisci un numero valido per il prezzo (es. 4,50 o 10,00).")
-       
 
     # -------------------------------
     # 🧾 TAB 2: VENDITE
@@ -363,7 +357,12 @@ if authentication_status:
         prodotti_df = get_data(prodotti_ws)
         vendite_df_all = get_data(vendite_ws)
         spese_df_all = get_data(spese_ws)
+        # ➜ normalizza vendite_df_all prima…
+        vendite_df_all["Venditore"] = vendite_df_all["Venditore"].astype(str).str.strip().str.lower()
+
+        # calcola UNA volta, con le spese
         analisi = analisi_vendite(prodotti_df, vendite_df_all, spese_df_all)
+            
 
         # Filtra le vendite dell' utente loggato
 
@@ -465,11 +464,12 @@ if authentication_status:
                 analisi.style.format({
                     "Ricavo totale (€)": "€ {:.2f}",
                     "Costo totale (€)": "€ {:.2f}",
+                    "Spese extra (€)": "€ {:.2f}",
                     "Guadagno totale (€)": "€ {:.2f}",
                     "Plusvalenza media (%)": "{:.1f}%"
                 }),
                 use_container_width=True
-            )
+)
         
 
             # Identifica il "King della vendita"
