@@ -1,5 +1,5 @@
 import streamlit as st
-from app import prodotti_ws, vendite_ws
+from app import prodotti_ws, vendite_ws, spese_ws
 from data_utils import _clean_price, registra_vendita_multipla,inventario_aggregato, analisi_vendite, get_data, add_row, calcola_bilancio, aggiorna_inventario
 import pandas as pd
 import streamlit_authenticator as stauth
@@ -221,87 +221,37 @@ if authentication_status:
     # -------------------------------
     # 💰 TAB 3: BILANCIO
     # -------------------------------
-    elif menu=="💰 Bilancio":
-        st.subheader("💰 Bilancio")
+    elif menu == "💰 Bilancio":
+        st.subheader("💰 Bilancio 50/50 (con spese extra)")
+
+        ensure_headers(spese_ws, ["Descrizione", "Costo", "Chi", "Timestamp"])
 
         prodotti_df = get_data(prodotti_ws)
         vendite_df = get_data(vendite_ws)
-        b = calcola_bilancio(prodotti_df, vendite_df)
+        spese_df = get_data(spese_ws)
 
-                # Countdown al pareggio
-        st.divider()
-
-        # --- BILANCIO GLOBALE E AVANZAMENTO ---
-        totale_spese = b["totale_spese"]
-        totale_entrate = b["totale_entrate"]
-        pareggio = b["pareggio"]
-        guadagno_netto = totale_entrate - totale_spese
-
-        if totale_spese > 0:
-            progresso = min(totale_entrate / totale_spese, 1.0)
-        else:
-            progresso = 0
-
-        # inizializza flag per palloncini
-        if "pareggio_festeggiato" not in st.session_state:
-            st.session_state.pareggio_festeggiato = False
-
-        # --- Sezione dinamica ---
-        if totale_entrate < totale_spese:
-            st.markdown("### 🎯 Mancano al pareggio")
-            st.metric("Importo mancante", f"€ {pareggio:.2f}")
-            st.progress(progresso)
-            st.markdown(f"**Avanzamento:** {progresso*100:.1f}% delle spese coperte")
-
-            # resetta il flag se torni sotto il pareggio
-            st.session_state.pareggio_festeggiato = False
-
-        elif abs(totale_entrate - totale_spese) < 1:
-            st.markdown("### ✅ Pareggio raggiunto!")
-            st.progress(1.0)
-            st.session_state.pareggio_festeggiato = False
-
-        else:
-            # PROFITTO 🤑
-            st.markdown("""
-                <div style="
-                    background-color: #E8F5E9;
-                    padding: 1rem;
-                    border-radius: 10px;
-                    border: 1px solid #C8E6C9;
-                    text-align: center;">
-                    <h3 style="color:#1B5E20;">💰 Guadagno netto</h3>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            st.metric("Profitto totale", f"€ {guadagno_netto:.2f}")
-            st.progress(1.0)
-            st.markdown("Hai superato il pareggio e stai generando **profitto netto!** 🥳")
-
-            # 🎈 Mostra i palloncini solo la prima volta che superi il pareggio
-            if not st.session_state.pareggio_festeggiato:
-                st.balloons()
-                st.session_state.pareggio_festeggiato = True
+        b = calcola_bilancio(prodotti_df, vendite_df, spese_df)
 
         st.divider()
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("Spese Elia", f"€ {b['spesa_elia']:.2f}")
+            st.metric("Spese Prodotti - Elia", f"€ {b['spesa_elia']:.2f}")
+            st.metric("Spese Extra - Elia", f"€ {b['spese_extra_elia']:.2f}")
             st.metric("Entrate Elia", f"€ {b['entrate_elia']:.2f}")
         with col2:
-            st.metric("Spese Tommy", f"€ {b['spesa_tommy']:.2f}")
+            st.metric("Spese Prodotti - Tommy", f"€ {b['spesa_tommy']:.2f}")
+            st.metric("Spese Extra - Tommy", f"€ {b['spese_extra_tommy']:.2f}")
             st.metric("Entrate Tommy", f"€ {b['entrate_tommy']:.2f}")
 
         st.divider()
         col3, col4 = st.columns(2)
         with col3:
-            st.metric("Totale Spese", f"€ {b['totale_spese']:.2f}")
+            st.metric("Totale Spese (prodotti + extra)", f"€ {b['totale_spese']:.2f}")
         with col4:
             st.metric("Totale Entrate", f"€ {b['totale_entrate']:.2f}")
 
         st.divider()
 
-        # Mostra chi deve a chi
         saldo_elia = b["saldo_elia"]
         saldo_tommy = b["saldo_tommy"]
 
@@ -314,6 +264,92 @@ if authentication_status:
 
         st.caption(f"Saldo Elia: € {saldo_elia:.2f}  |  Saldo Tommy: € {saldo_tommy:.2f}")
 
+        # --- Avanzamento verso il pareggio ---
+        st.divider()
+        totale_spese = b["totale_spese"]
+        totale_entrate = b["totale_entrate"]
+        pareggio = b["pareggio"]
+        guadagno_netto = totale_entrate - totale_spese
+
+        progresso = min((totale_entrate / totale_spese) if totale_spese > 0 else 0, 1.0)
+
+        if "pareggio_festeggiato" not in st.session_state:
+            st.session_state.pareggio_festeggiato = False
+
+        if totale_entrate < totale_spese:
+            st.markdown("### 🎯 Mancano al pareggio")
+            st.metric("Importo mancante", f"€ {pareggio:.2f}")
+            st.progress(progresso)
+            st.markdown(f"**Avanzamento:** {progresso*100:.1f}% delle spese coperte")
+            st.session_state.pareggio_festeggiato = False
+        elif abs(totale_entrate - totale_spese) < 1:
+            st.markdown("### ✅ Pareggio raggiunto!")
+            st.progress(1.0)
+            st.session_state.pareggio_festeggiato = False
+        else:
+            st.markdown("""
+                <div style="
+                    background-color: #E8F5E9;
+                    padding: 1rem;
+                    border-radius: 10px;
+                    border: 1px solid #C8E6C9;
+                    text-align: center;">
+                    <h3 style="color:#1B5E20;">💰 Guadagno netto</h3>
+                </div>
+            """, unsafe_allow_html=True)
+            st.metric("Profitto totale", f"€ {guadagno_netto:.2f}")
+            st.progress(1.0)
+            st.markdown("Hai superato il pareggio e stai generando **profitto netto!** 🥳")
+            if not st.session_state.pareggio_festeggiato:
+                st.balloons()
+                st.session_state.pareggio_festeggiato = True
+
+        # -------------------------------
+        # ➕ Inserisci spesa extra
+        # -------------------------------
+        st.markdown("---")
+        st.markdown("### ➕ Inserisci spesa extra")
+
+        c1, c2, c3 = st.columns([2, 1, 1])
+        with c1:
+            descr = st.text_input("Descrizione", placeholder="Es. Sponsorizzata Instagram")
+        with c2:
+            costo_input = st.text_input("Costo (€)", placeholder="es. 5,00")
+        with c3:
+            chi = st.selectbox("Chi paga", ["Elia", "Tommy"])
+
+        if st.button("Inserisci spesa", type="primary", use_container_width=True):
+            if descr and costo_input:
+                try:
+                    costo_norm = costo_input.replace(",", ".").strip()
+                    costo_float = float(costo_norm)
+                    costo_format = f"€ {costo_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    add_row(spese_ws, [descr, costo_format, chi, timestamp])
+                    st.success("✅ Spesa inserita correttamente!")
+                    st.rerun()
+                except ValueError:
+                    st.warning("⚠️ Inserisci un numero valido per il costo (es. 4,50 o 10,00).")
+            else:
+                st.warning("⚠️ Inserisci descrizione e costo.")
+
+        # -------------------------------
+        # 📜 Storico spese
+        # -------------------------------
+        st.markdown("### 📜 Storico spese")
+        spese_df = get_data(spese_ws)  # ricarica
+        if spese_df.empty:
+            st.info("Nessuna spesa registrata.")
+        else:
+            # pulizia e ordinamento
+            spese_df["Costo"] = spese_df["Costo"].apply(_clean_price).round(2)
+            spese_df["Timestamp"] = spese_df.get("Timestamp", "").astype(str).str.strip()
+            _ts = pd.to_datetime(spese_df["Timestamp"], format="%d/%m/%Y %H:%M", errors="coerce")
+            spese_df = spese_df.assign(_ts=_ts).sort_values("_ts", ascending=False).drop(columns=["_ts"])
+            spese_df = spese_df.rename(columns={"Chi": "Pagata da"})
+            spese_df["Costo (€)"] = spese_df["Costo"].map(lambda x: f"€ {x:.2f}")
+            st.dataframe(spese_df[["Timestamp", "Descrizione", "Pagata da", "Costo (€)"]], use_container_width=True, hide_index=True)
+
 
 
     # -------------------------------
@@ -323,9 +359,11 @@ if authentication_status:
         import plotly.graph_objects as go
         from datetime import datetime, timedelta
         import pytz
-
+       
         prodotti_df = get_data(prodotti_ws)
         vendite_df_all = get_data(vendite_ws)
+        spese_df_all = get_data(spese_ws)
+        analisi = analisi_vendite(prodotti_df, vendite_df_all, spese_df_all)
 
         # Filtra le vendite dell' utente loggato
 

@@ -80,72 +80,76 @@ def aggiorna_inventario(df_prodotti, df_vendite):
 # ---------------------------------------------------
 # 💰 Calcolo bilancio (Elia ↔ Tommy)
 # ---------------------------------------------------
-def calcola_bilancio(df_prodotti, df_vendite):
+def calcola_bilancio(df_prodotti, df_vendite, df_spese=None):
     """
-    Calcola spese, entrate e saldo reale tra Elia e Tommy:
-    - chi ha speso di più deve ricevere la metà della differenza
-    - le vendite si dividono 50/50, quindi chi vende deve dare metà all'altro
+    Bilancio 50/50 includendo spese extra (foglio 'Spese'):
+    - Le spese extra si sommano alle spese prodotto del socio che le ha sostenute.
+    - Il pareggio = (spese prodotti + spese extra) - entrate.
     """
-
-    if df_prodotti.empty:
+    if df_prodotti.empty and (df_spese is None or df_spese.empty):
         return {
-            "spesa_elia": 0.0,
-            "spesa_tommy": 0.0,
-            "entrate_elia": 0.0,
-            "entrate_tommy": 0.0,
-            "totale_spese": 0.0,
-            "totale_entrate": 0.0,
-            "saldo_elia": 0.0,
-            "saldo_tommy": 0.0,
-            "pareggio": 0.0,
+            "spesa_elia": 0.0, "spesa_tommy": 0.0,
+            "spese_extra_elia": 0.0, "spese_extra_tommy": 0.0,
+            "entrate_elia": 0.0, "entrate_tommy": 0.0,
+            "totale_spese": 0.0, "totale_entrate": 0.0,
+            "saldo_elia": 0.0, "saldo_tommy": 0.0, "pareggio": 0.0,
         }
 
-    # --- Pulizia dati ---
-    df_prodotti = df_prodotti.copy()
-    df_prodotti["Prezzo_unitario"] = df_prodotti["Prezzo_unitario"].apply(_clean_price)
-    df_prodotti["Quantita"] = pd.to_numeric(df_prodotti["Quantita"], errors="coerce").fillna(0)
-
-    # --- Calcolo spese ---
-    df_prodotti["Spesa_totale"] = (df_prodotti["Prezzo_unitario"] * df_prodotti["Quantita"]).round(2)
-    spese_per_socio = df_prodotti.groupby("Comprato_da")["Spesa_totale"].sum().to_dict()
-
+    # --- Spese prodotti ---
+    dfp = df_prodotti.copy()
+    dfp["Prezzo_unitario"] = dfp["Prezzo_unitario"].apply(_clean_price)
+    dfp["Quantita"] = pd.to_numeric(dfp["Quantita"], errors="coerce").fillna(0)
+    dfp["Spesa_totale"] = (dfp["Prezzo_unitario"] * dfp["Quantita"]).round(2)
+    spese_per_socio = dfp.groupby("Comprato_da")["Spesa_totale"].sum().to_dict()
     spesa_elia = round(spese_per_socio.get("Elia", 0.0), 2)
     spesa_tommy = round(spese_per_socio.get("Tommy", 0.0), 2)
-    totale_spese = round(spesa_elia + spesa_tommy, 2)
 
-    # --- Calcolo entrate ---
+    # --- Spese extra ---
+    extra_elia = extra_tommy = 0.0
+    if df_spese is not None and not df_spese.empty:
+        dfs = df_spese.copy()
+        dfs["Chi"] = dfs["Chi"].astype(str).str.strip().str.capitalize()
+        dfs["Costo"] = dfs["Costo"].apply(_clean_price)
+        extra = dfs.groupby("Chi")["Costo"].sum().to_dict()
+        extra_elia = round(extra.get("Elia", 0.0), 2)
+        extra_tommy = round(extra.get("Tommy", 0.0), 2)
+
+    # --- Entrate ---
     entrate_elia = entrate_tommy = 0.0
-    if not df_vendite.empty:
-        df_vendite = df_vendite.copy()
-        if "Prezzo_totale_vendita" in df_vendite.columns:
-            df_vendite["Prezzo_totale_vendita"] = df_vendite["Prezzo_totale_vendita"].apply(_clean_price)
-        if "Venditore" not in df_vendite.columns:
-            df_vendite["Venditore"] = "Elia"
-        entrate_elia = round(df_vendite.loc[df_vendite["Venditore"] == "Elia", "Prezzo_totale_vendita"].sum(), 2)
-        entrate_tommy = round(df_vendite.loc[df_vendite["Venditore"] == "Tommy", "Prezzo_totale_vendita"].sum(), 2)
+    if df_vendite is not None and not df_vendite.empty:
+        dfv = df_vendite.copy()
+        if "Prezzo_totale_vendita" in dfv.columns:
+            dfv["Prezzo_totale_vendita"] = dfv["Prezzo_totale_vendita"].apply(_clean_price)
+        if "Venditore" not in dfv.columns:
+            dfv["Venditore"] = "Elia"
+        dfv["Venditore"] = dfv["Venditore"].astype(str).str.strip().str.capitalize()
+        entrate_elia = round(dfv.loc[dfv["Venditore"] == "Elia", "Prezzo_totale_vendita"].sum(), 2)
+        entrate_tommy = round(dfv.loc[dfv["Venditore"] == "Tommy", "Prezzo_totale_vendita"].sum(), 2)
 
+    # --- Totali e saldi ---
+    totale_spese = round(spesa_elia + spesa_tommy + extra_elia + extra_tommy, 2)
     totale_entrate = round(entrate_elia + entrate_tommy, 2)
 
-    # --- Calcolo saldo reale ---
-    diff_spese = spesa_elia - spesa_tommy
+    # differenze tra soci (spese - entrate, 50/50)
+    diff_spese = (spesa_elia + extra_elia) - (spesa_tommy + extra_tommy)
     diff_entrate = entrate_elia - entrate_tommy
     saldo_elia = round((diff_spese / 2) - (diff_entrate / 2), 2)
     saldo_tommy = round(-saldo_elia, 2)
-
     pareggio = round(totale_spese - totale_entrate, 2)
 
     return {
-        "spesa_elia": spesa_elia,
-        "spesa_tommy": spesa_tommy,
-        "entrate_elia": entrate_elia,
-        "entrate_tommy": entrate_tommy,
+        "spesa_elia": round(spesa_elia, 2),
+        "spesa_tommy": round(spesa_tommy, 2),
+        "spese_extra_elia": round(extra_elia, 2),
+        "spese_extra_tommy": round(extra_tommy, 2),
+        "entrate_elia": round(entrate_elia, 2),
+        "entrate_tommy": round(entrate_tommy, 2),
         "totale_spese": totale_spese,
         "totale_entrate": totale_entrate,
         "saldo_elia": saldo_elia,
         "saldo_tommy": saldo_tommy,
         "pareggio": pareggio,
     }
-
 
 # ---------------------------------------------------
 # 🧾 Gestione vendite multiple
@@ -204,46 +208,39 @@ def registra_vendita_multipla(df_prodotti, vendita_dict, prezzo_totale, venditor
 # ---------------------------------------------------
 # 📊 Analisi vendite: "King della vendita"
 # ---------------------------------------------------
-def analisi_vendite(df_prodotti, df_vendite):
+def analisi_vendite(df_prodotti, df_vendite, df_spese=None):
     """
     Per venditore calcola:
     - Ordini registrati (multi-ordine = 1, via (Venditore, Timestamp) unici)
     - Ricavo totale
-    - Costo totale (usando costo medio pesato per prodotto)
+    - Costo totale (costo medio prodotti + spese extra del venditore)
     - Guadagno totale
-    - Plusvalenza media (%)
+    - Plusvalenza media (%) = Guadagno / (Costo prodotti + Spese extra)
     """
     import pandas as pd
 
     if df_vendite.empty or df_prodotti.empty:
         return pd.DataFrame(columns=[
             "Venditore", "Ordini registrati", "Ricavo totale (€)",
-            "Costo totale (€)", "Guadagno totale (€)", "Plusvalenza media (%)"
+            "Costo totale (€)", "Guadagno totale (€)", "Plusvalenza media (%)", "Spese extra (€)"
         ])
 
-    # --- Pulizia ---
+    # --- Pulizia base ---
     dfp = df_prodotti.copy()
-    dfv = df_vendite.copy()
-
-    # uniforma nomi
     if "Nome" in dfp.columns:
         dfp = dfp.rename(columns={"Nome": "Prodotto"})
-
     dfp["Prodotto"] = dfp["Prodotto"].astype(str).str.strip().str.lower()
     dfp["Prezzo_unitario"] = dfp["Prezzo_unitario"].apply(_clean_price)
     dfp["Quantita"] = pd.to_numeric(dfp["Quantita"], errors="coerce").fillna(0)
 
+    dfv = df_vendite.copy()
     dfv["Prodotto"] = dfv["Prodotto"].astype(str).str.strip().str.lower()
     dfv["Venditore"] = dfv["Venditore"].astype(str).str.strip().str.capitalize()
     dfv["Prezzo_totale_vendita"] = dfv["Prezzo_totale_vendita"].apply(_clean_price)
     dfv["Quantita"] = pd.to_numeric(dfv["Quantita"], errors="coerce").fillna(0)
-    # timestamp come stringa pulita (basta per l'unicità dell'ordine)
-    if "Timestamp" in dfv.columns:
-        dfv["Timestamp"] = dfv["Timestamp"].astype(str).str.strip()
-    else:
-        dfv["Timestamp"] = ""
+    dfv["Timestamp"] = dfv.get("Timestamp", "").astype(str).str.strip()
 
-    # --- Costo medio pesato per prodotto (UNA riga per prodotto) ---
+    # --- Costo medio pesato per prodotto ---
     costi = (
         dfp.groupby("Prodotto").apply(
             lambda x: (x["Prezzo_unitario"] * x["Quantita"]).sum() / x["Quantita"].sum()
@@ -251,40 +248,50 @@ def analisi_vendite(df_prodotti, df_vendite):
         ).reset_index(name="Costo_medio_unitario")
     )
 
-    # --- Merge vendite + costi medi (niente duplicazioni) ---
     m = dfv.merge(costi, on="Prodotto", how="left")
-    m["Costo_totale"] = m["Costo_medio_unitario"].fillna(0) * m["Quantita"]
+    m["Costo_totale_prodotti"] = m["Costo_medio_unitario"].fillna(0) * m["Quantita"]
 
-    # --- Totali per venditore ---
+    # --- Totali per venditore (ricavi, costo prodotti) ---
     totali = (
         m.groupby("Venditore", as_index=False)
          .agg(Ricavo_totale=("Prezzo_totale_vendita", "sum"),
-              Costo_totale=("Costo_totale", "sum"))
+              Costo_prodotti=("Costo_totale_prodotti", "sum"))
     )
 
     # --- Ordini registrati: (Venditore, Timestamp) unici ---
     ordini = (
-        dfv[["Venditore", "Timestamp"]]
-        .drop_duplicates()
-        .groupby("Venditore", as_index=False)
-        .size()
-        .rename(columns={"size": "Ordini registrati"})
+        dfv[["Venditore", "Timestamp"]].drop_duplicates()
+           .groupby("Venditore", as_index=False).size()
+           .rename(columns={"size": "Ordini registrati"})
     )
 
-    # --- Composizione finale ---
     risultati = totali.merge(ordini, on="Venditore", how="left").fillna({"Ordini registrati": 0})
-    risultati["Guadagno totale (€)"] = risultati["Ricavo_totale"] - risultati["Costo_totale"]
+
+    # --- Spese extra per venditore ---
+    extra_map = {}
+    if df_spese is not None and not df_spese.empty:
+        dfs = df_spese.copy()
+        dfs["Chi"] = dfs["Chi"].astype(str).str.strip().str.capitalize()
+        dfs["Costo"] = dfs["Costo"].apply(_clean_price)
+        extra_map = dfs.groupby("Chi")["Costo"].sum().to_dict()
+
+    risultati["Spese extra (€)"] = risultati["Venditore"].map(extra_map).fillna(0.0)
+
+    # --- Costo totale (prodotti + extra) e guadagno ---
+    risultati["Costo totale (€)"] = risultati["Costo_prodotti"] + risultati["Spese extra (€)"]
+    risultati["Ricavo totale (€)"] = risultati["Ricavo_totale"]
+    risultati["Guadagno totale (€)"] = risultati["Ricavo totale (€)"] - risultati["Costo totale (€)"]
+
     risultati["Plusvalenza media (%)"] = risultati.apply(
-        lambda r: (r["Guadagno totale (€)"] / r["Costo_totale"] * 100) if r["Costo_totale"] > 0 else 0.0,
+        lambda r: (r["Guadagno totale (€)"] / r["Costo totale (€)"] * 100) if r["Costo totale (€)"] > 0 else 0.0,
         axis=1
     )
 
-    risultati = risultati.rename(columns={
-        "Ricavo_totale": "Ricavo totale (€)",
-        "Costo_totale": "Costo totale (€)"
-    }).round(2)
+    risultati = risultati[[
+        "Venditore", "Ordini registrati", "Ricavo totale (€)",
+        "Costo totale (€)", "Spese extra (€)", "Guadagno totale (€)", "Plusvalenza media (%)"
+    ]].round(2)
 
-    # ordina per guadagno
     risultati = risultati.sort_values("Guadagno totale (€)", ascending=False).reset_index(drop=True)
 
     # garantisci sempre Elia e Tommy
@@ -295,6 +302,7 @@ def analisi_vendite(df_prodotti, df_vendite):
                 "Ordini registrati": 0,
                 "Ricavo totale (€)": 0.0,
                 "Costo totale (€)": 0.0,
+                "Spese extra (€)": 0.0,
                 "Guadagno totale (€)": 0.0,
                 "Plusvalenza media (%)": 0.0
             }

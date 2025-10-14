@@ -20,3 +20,6 @@ SHEET_NAME = "GestioneSocieta"
 #sheets access
 prodotti_ws = client.open(SHEET_NAME).worksheet("prodotti")
 vendite_ws = client.open(SHEET_NAME).worksheet("vendite")
+spese_ws = client.open(SHEET_NAME).worksheet("Spese")
+
+
