@@ -446,7 +446,45 @@ if authentication_status:
             st.success("🔥 Hai raggiunto l'obiettivo giornaliero, continua così per la settimana!")
         elif progresso_settimana >= 1:
             st.balloons()
-            st.success("🏆 Complimenti! Hai raggiunto l'obiettivo settimanale!")
+            st.success("🏆 Complimenti! Hai raggiunto l'obiettivo settimanale!")        # --- Copertura costi prodotti: costo venduto / costo acquistato ---
+        st.markdown("---")
+        st.markdown("#### 🔄 Copertura costi prodotti")
+
+        # 1) Costi totali acquistati (dal foglio prodotti)
+        dfp = prodotti_df.copy()
+        dfp["Prezzo_unitario"] = dfp["Prezzo_unitario"].apply(_clean_price)
+        dfp["Quantita"] = pd.to_numeric(dfp["Quantita"], errors="coerce").fillna(0)
+        costo_tot_acquisti = (dfp["Prezzo_unitario"] * dfp["Quantita"]).sum()
+
+        # 2) Costo totale dei prodotti venduti (usando costo medio ponderato)
+        dfp_cost = dfp.rename(columns={"Nome": "Prodotto"}) if "Nome" in dfp.columns else dfp
+        dfp_cost["Prodotto"] = dfp_cost["Prodotto"].astype(str).str.strip().str.lower()
+
+        costi_medi = (
+            dfp_cost.groupby("Prodotto").apply(
+                lambda x: (x["Prezzo_unitario"] * x["Quantita"]).sum() / x["Quantita"].sum()
+                if x["Quantita"].sum() > 0 else 0.0
+            ).reset_index(name="Costo_medio_unitario")
+        )
+
+        dfv_all = vendite_df_all.copy()
+        dfv_all["Prodotto"] = dfv_all["Prodotto"].astype(str).str.strip().str.lower()
+        dfv_all["Quantita"] = pd.to_numeric(dfv_all["Quantita"], errors="coerce").fillna(0)
+
+        m = dfv_all.merge(costi_medi, on="Prodotto", how="left")
+        costo_tot_venduto = (m["Costo_medio_unitario"].fillna(0) * m["Quantita"]).sum()
+
+        # 3) Progress bar
+        progresso = float(costo_tot_venduto) / float(costo_tot_acquisti) if costo_tot_acquisti > 0 else 0.0
+        progresso = max(0.0, min(progresso, 1.0))  # clamp 0..1
+
+        st.progress(progresso)
+        st.caption(
+            f"Costi venduti: € {costo_tot_venduto:.2f} / Costi acquistati: € {costo_tot_acquisti:.2f} "
+            f"({progresso*100:.1f}%)"
+        )
+
+        
 
         # --- SEZIONE ANALISI COMPLETA ---
         st.markdown("---")
