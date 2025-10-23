@@ -450,7 +450,7 @@ if authentication_status:
             st.balloons()
             st.success("🏆 Complimenti! Hai raggiunto l'obiettivo settimanale!")        # --- Copertura costi prodotti: costo venduto / costo acquistato ---
         st.markdown("---")
-        st.markdown("#### 🔄 Copertura costi prodotti")
+        st.markdown("#### 🔄 Percentuale di prododotti venduti", )
 
         # 1) Costi totali acquistati (dal foglio prodotti)
         dfp = prodotti_df.copy()

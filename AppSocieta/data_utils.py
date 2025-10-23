@@ -400,7 +400,6 @@ def inventario_aggregato(df_prodotti, df_vendite):
     ]]
 
     grouped = grouped.rename(columns={"Nome": "Prodotto"})
-    grouped["Quantità residua"]   = grouped["Quantità residua"].round().astype(int)
     return grouped
 
 
