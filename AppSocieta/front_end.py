@@ -413,7 +413,7 @@ if authentication_status:
         totale_settimana = vendite_settimanali["Prezzo_totale_vendita"].sum()
 
         # --- Obiettivi ---
-        obiettivo_giorno = 35.0
+        obiettivo_giorno = 60
         obiettivo_settimana = obiettivo_giorno * 7
         progresso_giorno = min(totale_giorno / obiettivo_giorno, 1)
         progresso_settimana = min(totale_settimana / obiettivo_settimana, 1)
@@ -480,7 +480,7 @@ if authentication_status:
 
         st.progress(progresso)
         st.caption(
-            f"Costi venduti: € {costo_tot_venduto:.2f} / Costi acquistati: € {costo_tot_acquisti:.2f} "
+            f"Costo prodotti venduti: € {costo_tot_venduto:.2f} / Costo totale prodotti: € {costo_tot_acquisti:.2f} "
             f"({progresso*100:.1f}%)"
         )
 
