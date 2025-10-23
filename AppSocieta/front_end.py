@@ -70,9 +70,11 @@ if authentication_status:
         vendite_df = get_data(vendite_ws)
         inventario_df = inventario_aggregato(prodotti_df, vendite_df)
 
-        st.dataframe(inventario_df, use_container_width=True)
-        st.caption("⚙️ Costo medio e prezzo medio calcolati automaticamente in base alle vendite e agli acquisti.")
+        # 🔎 mostra solo prodotti con quantità residua > 0
+        inventario_df = inventario_df[inventario_df["Quantità residua"].fillna(0) > 0].copy()
 
+        st.dataframe(inventario_df, use_container_width=True, hide_index=True)
+        st.caption("⚙️ Costo medio e prezzo medio calcolati automaticamente in base alle vendite e agli acquisti.")
 
         st.markdown("### ➕ Aggiungi nuovo prodotto")
         col1, col2, col3, col4 = st.columns(4)
