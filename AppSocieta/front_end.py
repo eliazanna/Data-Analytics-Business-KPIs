@@ -4,6 +4,7 @@ from data_utils import _clean_price, registra_vendita_multipla,inventario_aggreg
 import pandas as pd
 import streamlit_authenticator as stauth
 from datetime import datetime, timedelta  
+from zoneinfo import ZoneInfo
 
 st.set_page_config(
     page_title="Gestione Società - Elia & Tommy",
@@ -395,7 +396,7 @@ if authentication_status:
         else:
             vendite_df["Timestamp"] = pd.NaT
 
-        italy_tz = pytz.timezone("Europe/Rome")
+        italy_tz = ZoneInfo("Europe/Rome")
         oggi = datetime.now(italy_tz).date()
         settimana_inizio = oggi - timedelta(days=6)
         oggi_dt = pd.to_datetime(oggi)
