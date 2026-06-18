@@ -324,7 +324,6 @@ if authentication_status:
                 st.plotly_chart(fig, use_container_width=True)
 
         if prog_stag >= 1:
-            st.balloons()
             st.success("Obiettivo stagionale raggiunto!")
         elif prog_s >= 1:
             st.success("Obiettivo settimanale raggiunto!")
@@ -425,7 +424,6 @@ if authentication_status:
             st.metric("Profitto totale", f"€ {guadagno_netto:.2f}")
             st.progress(1.0)
             if not st.session_state.pareggio_festeggiato:
-                st.balloons()
                 st.session_state.pareggio_festeggiato = True
 
         st.markdown("---")
