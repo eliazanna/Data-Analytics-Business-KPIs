@@ -93,9 +93,8 @@ if authentication_status:
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#ccc"),
         margin=dict(l=0, r=10, t=30, b=0),
-        xaxis=dict(gridcolor="#243550", tickfont=dict(color="#aaa")),
-        yaxis=dict(gridcolor="#243550", tickfont=dict(color="#aaa")),
     )
+    AXIS_STYLE = dict(gridcolor="#243550", tickfont=dict(color="#aaa"))
 
     # ──────────────────────────────────────────────────────────────────────────
     # DASHBOARD
