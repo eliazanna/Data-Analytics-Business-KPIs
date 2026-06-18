@@ -92,9 +92,7 @@ if authentication_status:
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#ccc"),
-        margin=dict(l=0, r=10, t=30, b=0),
     )
-    AXIS_STYLE = dict(gridcolor="#243550", tickfont=dict(color="#aaa"))
 
     # ──────────────────────────────────────────────────────────────────────────
     # DASHBOARD
