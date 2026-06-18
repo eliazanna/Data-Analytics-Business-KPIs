@@ -537,7 +537,7 @@ if authentication_status:
         inventario_df = inventario_aggregato(prodotti_df, vendite_df)
         inventario_df = inventario_df[inventario_df["Quantità residua"].fillna(0) > 0].copy()
 
-        soglia_bassa = 3
+        soglia_bassa = 2
         low_stock = inventario_df[inventario_df["Quantità residua"] <= soglia_bassa]
         if not low_stock.empty:
             st.markdown(f"**{len(low_stock)} prodott{'o' if len(low_stock)==1 else 'i'} con scorte basse (≤ {soglia_bassa} pz)**")
