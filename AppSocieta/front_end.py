@@ -389,7 +389,6 @@ if authentication_status:
             textposition="outside",
             decreasing=dict(marker=dict(color="#ff5252")),
             increasing=dict(marker=dict(color="#4a9eff")),
-            totals=dict(marker=dict(color="#00e676" if guadagno >= 0 else "#ff5252")),
             connector=dict(line=dict(color="#333", width=1)),
         ))
         fig_wf.update_layout(
