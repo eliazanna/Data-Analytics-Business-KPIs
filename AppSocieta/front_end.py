@@ -178,47 +178,66 @@ if authentication_status:
                     {delta}
                 </div>""", unsafe_allow_html=True)
 
-        # --- TREND RICAVI GIORNALIERI (ultimi 30 giorni) ---
-        st.markdown('<div class="section-title">📉 Trend ricavi giornalieri — ultimi 30 giorni</div>', unsafe_allow_html=True)
+        # --- VENDITE SCORSA STAGIONE (fino al 31 ottobre) ---
+        st.markdown('<div class="section-title">🎃 Vendite scorsa stagione — Elia vs Tommy</div>', unsafe_allow_html=True)
 
         if not vendite_df_all.empty and "_date" in vendite_df_all.columns:
-            cutoff = oggi - timedelta(days=29)
-            trend_df = (
-                vendite_df_all[vendite_df_all["_date"] >= cutoff]
-                .groupby(["_date", "Venditore"], as_index=False)["Prezzo_totale_vendita"].sum()
-            )
-            trend_df["_date"] = pd.to_datetime(trend_df["_date"])
+            from datetime import date as date_type
+            fine_stagione = date_type(2025, 10, 31)
 
-            # Cumulative per il totale
-            totale_trend = (
-                vendite_df_all[vendite_df_all["_date"] >= cutoff]
-                .groupby("_date", as_index=False)["Prezzo_totale_vendita"].sum()
-                .rename(columns={"Prezzo_totale_vendita": "Totale"})
-            )
-            totale_trend["_date"] = pd.to_datetime(totale_trend["_date"])
+            stagione_df = vendite_df_all[vendite_df_all["_date"] <= fine_stagione].copy()
 
-            fig_trend = go.Figure()
-            colors = {"Elia": "#4a9eff", "Tommy": "#ff6b6b", "Elia ": "#4a9eff"}
-            for venditore in trend_df["Venditore"].unique():
-                sub = trend_df[trend_df["Venditore"] == venditore].sort_values("_date")
-                fig_trend.add_trace(go.Scatter(
-                    x=sub["_date"], y=sub["Prezzo_totale_vendita"],
-                    mode="lines+markers", name=venditore,
-                    line=dict(color=colors.get(venditore, "#aaa"), width=2.5),
-                    marker=dict(size=6), fill="tozeroy",
-                    fillcolor=f"rgba({','.join(str(int(colors.get(venditore,'#aaaaaa').lstrip('#')[i:i+2],16)) for i in (0,2,4))},0.08)"
-                ))
-            fig_trend.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#ccc"), height=280,
-                margin=dict(l=0, r=0, t=20, b=0),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                xaxis=dict(gridcolor="#1e3a5f", showgrid=True),
-                yaxis=dict(gridcolor="#1e3a5f", showgrid=True, tickprefix="€ "),
-            )
-            st.plotly_chart(fig_trend, use_container_width=True)
+            if stagione_df.empty:
+                st.info("Nessuna vendita registrata nella stagione Halloween 2025.")
+            else:
+                inizio_stagione = stagione_df["_date"].min()
+                trend_df = (
+                    stagione_df
+                    .groupby(["_date", "Venditore"], as_index=False)["Prezzo_totale_vendita"].sum()
+                )
+                trend_df["_date"] = pd.to_datetime(trend_df["_date"])
+
+                # Cumulative per venditore
+                venditori = trend_df["Venditore"].unique()
+                date_range = pd.date_range(start=inizio_stagione, end=fine_stagione, freq="D")
+
+                fig_trend = go.Figure()
+                colors_stagione = {"Elia": "#e63946", "Tommy": "#457b9d"}
+                fills = {"Elia": "rgba(230,57,70,0.12)", "Tommy": "rgba(69,123,157,0.12)"}
+
+                for venditore in ["Elia", "Tommy"]:
+                    sub = trend_df[trend_df["Venditore"] == venditore].set_index("_date")
+                    sub = sub.reindex(date_range, fill_value=0).reset_index()
+                    sub.columns = ["_date", "Venditore", "Prezzo_totale_vendita"]
+                    sub["Venditore"] = venditore
+
+                    fig_trend.add_trace(go.Scatter(
+                        x=sub["_date"],
+                        y=sub["Prezzo_totale_vendita"],
+                        mode="lines+markers",
+                        name=venditore,
+                        line=dict(color=colors_stagione[venditore], width=2.5),
+                        marker=dict(size=5, color=colors_stagione[venditore]),
+                        fill="tozeroy",
+                        fillcolor=fills[venditore],
+                        hovertemplate=f"<b>{venditore}</b><br>%{{x|%d %b}}<br>€ %{{y:.2f}}<extra></extra>"
+                    ))
+
+                fig_trend.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#ddd"), height=300,
+                    margin=dict(l=0, r=0, t=20, b=0),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+                                font=dict(color="#ddd")),
+                    xaxis=dict(gridcolor="#2a3a50", showgrid=True, tickformat="%d %b",
+                               tickfont=dict(color="#bbb")),
+                    yaxis=dict(gridcolor="#2a3a50", showgrid=True, tickprefix="€ ",
+                               tickfont=dict(color="#bbb")),
+                    hovermode="x unified",
+                )
+                st.plotly_chart(fig_trend, use_container_width=True)
         else:
-            st.info("Nessuna vendita registrata per costruire il trend.")
+            st.info("Nessuna vendita registrata.")
 
         col_left, col_right = st.columns(2)
 
