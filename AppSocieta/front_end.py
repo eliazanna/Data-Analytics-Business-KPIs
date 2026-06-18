@@ -1,17 +1,63 @@
 import streamlit as st
 from app import prodotti_ws, vendite_ws, spese_ws
-from data_utils import _clean_price, registra_vendita_multipla,inventario_aggregato, analisi_vendite, get_data, add_row, calcola_bilancio, aggiorna_inventario, ensure_headers
+from data_utils import _clean_price, registra_vendita_multipla, inventario_aggregato, analisi_vendite, get_data, add_row, calcola_bilancio, aggiorna_inventario, ensure_headers
 import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
 import streamlit_authenticator as stauth
-from datetime import datetime, timedelta  
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 st.set_page_config(
     page_title="Gestione Società - Elia & Tommy",
     page_icon="💼",
-    layout="wide"   
+    layout="wide"
 )
 
+# --- CSS CUSTOM ---
+st.markdown("""
+<style>
+    /* Sfondo sidebar */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    }
+    [data-testid="stSidebar"] * {
+        color: #e0e0e0 !important;
+    }
+    /* KPI cards */
+    .kpi-card {
+        background: linear-gradient(135deg, #1e3a5f 0%, #0d2137 100%);
+        border: 1px solid #2e5090;
+        border-radius: 12px;
+        padding: 1.2rem 1.5rem;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    .kpi-label { font-size: 0.82rem; color: #9ab3d4; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .kpi-value { font-size: 1.9rem; font-weight: 700; color: #ffffff; }
+    .kpi-delta-pos { font-size: 0.85rem; color: #00e676; }
+    .kpi-delta-neg { font-size: 0.85rem; color: #ff5252; }
+    .kpi-delta-neutral { font-size: 0.85rem; color: #9ab3d4; }
+    /* Titoli sezione */
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #4a9eff;
+        margin: 1.5rem 0 0.8rem 0;
+        padding-bottom: 6px;
+        border-bottom: 2px solid #1e3a5f;
+    }
+    /* Alert personalizzato */
+    .alert-low-stock {
+        background: #3d1a1a;
+        border-left: 4px solid #ff5252;
+        padding: 0.6rem 1rem;
+        border-radius: 0 8px 8px 0;
+        margin: 4px 0;
+        color: #ffcdd2;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # --- CREDENZIALI ---
 names = ["Elia Zanini", "Tommaso"]
@@ -39,44 +85,553 @@ authenticator = stauth.Authenticate(
 
 # --- LOGIN ---
 name, authentication_status, username = authenticator.login("Login", "sidebar")
+
 if authentication_status:
-    # ✅ SOLO GLI UTENTI AUTENTICATI POSSONO VEDERE DA QUI IN POI
     st.sidebar.success(f"✅ Benvenuto {name}!")
     authenticator.logout("Logout", "main")
 
-    # Tutta la tua app va qui ↓↓↓
-
-
-    # -------------------------------
-    # 📦 TAB 1: INVENTARIO
-    # -------------------------------
-       
-    # --- SIDEBAR NAVIGAZIONE ---
     st.sidebar.markdown("## 💼 Gestione Società")
-
-    # Menu statico in verticale
     menu = st.sidebar.radio(
         "Navigazione",
-        ["📈 Dashboard Venditore","💰 Bilancio", "🧾 Vendite", "📦 Inventario"],
-        index=0,   # pagina predefinita (Inventario)
+        ["📊 Dashboard", "💰 Bilancio", "🧾 Vendite", "📦 Inventario"],
+        index=0,
         key="menu_choice"
     )
 
+    italy_tz = ZoneInfo("Europe/Rome")
+    oggi = datetime.now(italy_tz).date()
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # 📊 DASHBOARD
+    # ──────────────────────────────────────────────────────────────────────────
+    if menu == "📊 Dashboard":
+        prodotti_df = get_data(prodotti_ws)
+        vendite_df_all = get_data(vendite_ws)
+        spese_df_all = get_data(spese_ws)
 
-    if menu== "📦 Inventario":
+        st.markdown("## 📊 Dashboard")
+        st.caption("Panoramica in tempo reale — dati aggiornati da Google Sheets")
+
+        # --- Prep dati ---
+        if not vendite_df_all.empty:
+            vendite_df_all["Venditore"] = vendite_df_all["Venditore"].astype(str).str.strip().str.capitalize()
+            vendite_df_all["Prezzo_totale_vendita"] = vendite_df_all["Prezzo_totale_vendita"].apply(_clean_price)
+            vendite_df_all["Quantita"] = pd.to_numeric(vendite_df_all["Quantita"], errors="coerce").fillna(0)
+            vendite_df_all["_ts"] = pd.to_datetime(
+                vendite_df_all["Timestamp"].astype(str).str.strip(),
+                format="%d/%m/%Y %H:%M", errors="coerce"
+            )
+            vendite_df_all["_date"] = vendite_df_all["_ts"].dt.date
+
+        oggi_dt = pd.to_datetime(oggi)
+        ieri = oggi - timedelta(days=1)
+        settimana_start = oggi - timedelta(days=6)
+        settimana_prec_start = oggi - timedelta(days=13)
+        settimana_prec_end = oggi - timedelta(days=7)
+
+        def ricavo_periodo(df, start, end):
+            if df.empty or "_date" not in df.columns:
+                return 0.0
+            mask = (df["_date"] >= start) & (df["_date"] <= end)
+            return df.loc[mask, "Prezzo_totale_vendita"].sum()
+
+        def ordini_periodo(df, start, end):
+            if df.empty or "_date" not in df.columns:
+                return 0
+            mask = (df["_date"] >= start) & (df["_date"] <= end)
+            sub = df.loc[mask]
+            return sub[["Venditore", "Timestamp"]].drop_duplicates().shape[0]
+
+        tot_oggi = ricavo_periodo(vendite_df_all, oggi, oggi) if not vendite_df_all.empty else 0.0
+        tot_ieri = ricavo_periodo(vendite_df_all, ieri, ieri) if not vendite_df_all.empty else 0.0
+        tot_sett = ricavo_periodo(vendite_df_all, settimana_start, oggi) if not vendite_df_all.empty else 0.0
+        tot_sett_prec = ricavo_periodo(vendite_df_all, settimana_prec_start, settimana_prec_end) if not vendite_df_all.empty else 0.0
+        ordini_oggi = ordini_periodo(vendite_df_all, oggi, oggi) if not vendite_df_all.empty else 0
+        tot_ricavi = vendite_df_all["Prezzo_totale_vendita"].sum() if not vendite_df_all.empty else 0.0
+
+        analisi = analisi_vendite(prodotti_df, vendite_df_all, spese_df_all)
+        margine_medio = analisi["Plusvalenza media (%)"].mean() if not analisi.empty else 0.0
+
+        def delta_html(curr, prev, suffix="€", invert=False):
+            if prev == 0:
+                return '<span class="kpi-delta-neutral">— n/d</span>'
+            diff = curr - prev
+            pct = (diff / abs(prev)) * 100
+            icon = "▲" if diff >= 0 else "▼"
+            cls = "kpi-delta-pos" if (diff >= 0) != invert else "kpi-delta-neg"
+            return f'<span class="{cls}">{icon} {abs(pct):.1f}% vs ieri/sett. prec.</span>'
+
+        # --- KPI ROW ---
+        c1, c2, c3, c4 = st.columns(4)
+        kpis = [
+            (c1, "💶 Ricavi oggi", f"€ {tot_oggi:.2f}", delta_html(tot_oggi, tot_ieri)),
+            (c2, "📅 Ricavi settimana", f"€ {tot_sett:.2f}", delta_html(tot_sett, tot_sett_prec)),
+            (c3, "🛒 Ordini oggi", str(ordini_oggi), '<span class="kpi-delta-neutral">ordini registrati</span>'),
+            (c4, "📈 Margine medio", f"{margine_medio:.1f}%", '<span class="kpi-delta-neutral">plusvalenza media</span>'),
+        ]
+        for col, label, value, delta in kpis:
+            with col:
+                st.markdown(f"""
+                <div class="kpi-card">
+                    <div class="kpi-label">{label}</div>
+                    <div class="kpi-value">{value}</div>
+                    {delta}
+                </div>""", unsafe_allow_html=True)
+
+        # --- TREND RICAVI GIORNALIERI (ultimi 30 giorni) ---
+        st.markdown('<div class="section-title">📉 Trend ricavi giornalieri — ultimi 30 giorni</div>', unsafe_allow_html=True)
+
+        if not vendite_df_all.empty and "_date" in vendite_df_all.columns:
+            cutoff = oggi - timedelta(days=29)
+            trend_df = (
+                vendite_df_all[vendite_df_all["_date"] >= cutoff]
+                .groupby(["_date", "Venditore"], as_index=False)["Prezzo_totale_vendita"].sum()
+            )
+            trend_df["_date"] = pd.to_datetime(trend_df["_date"])
+
+            # Cumulative per il totale
+            totale_trend = (
+                vendite_df_all[vendite_df_all["_date"] >= cutoff]
+                .groupby("_date", as_index=False)["Prezzo_totale_vendita"].sum()
+                .rename(columns={"Prezzo_totale_vendita": "Totale"})
+            )
+            totale_trend["_date"] = pd.to_datetime(totale_trend["_date"])
+
+            fig_trend = go.Figure()
+            colors = {"Elia": "#4a9eff", "Tommy": "#ff6b6b", "Elia ": "#4a9eff"}
+            for venditore in trend_df["Venditore"].unique():
+                sub = trend_df[trend_df["Venditore"] == venditore].sort_values("_date")
+                fig_trend.add_trace(go.Scatter(
+                    x=sub["_date"], y=sub["Prezzo_totale_vendita"],
+                    mode="lines+markers", name=venditore,
+                    line=dict(color=colors.get(venditore, "#aaa"), width=2.5),
+                    marker=dict(size=6), fill="tozeroy",
+                    fillcolor=f"rgba({','.join(str(int(colors.get(venditore,'#aaaaaa').lstrip('#')[i:i+2],16)) for i in (0,2,4))},0.08)"
+                ))
+            fig_trend.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#ccc"), height=280,
+                margin=dict(l=0, r=0, t=20, b=0),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                xaxis=dict(gridcolor="#1e3a5f", showgrid=True),
+                yaxis=dict(gridcolor="#1e3a5f", showgrid=True, tickprefix="€ "),
+            )
+            st.plotly_chart(fig_trend, use_container_width=True)
+        else:
+            st.info("Nessuna vendita registrata per costruire il trend.")
+
+        col_left, col_right = st.columns(2)
+
+        # --- TOP PRODOTTI ---
+        with col_left:
+            st.markdown('<div class="section-title">🏆 Top prodotti per ricavo</div>', unsafe_allow_html=True)
+            if not vendite_df_all.empty:
+                top_prod = (
+                    vendite_df_all.groupby("Prodotto", as_index=False)["Prezzo_totale_vendita"].sum()
+                    .sort_values("Prezzo_totale_vendita", ascending=True)
+                    .tail(8)
+                )
+                fig_top = go.Figure(go.Bar(
+                    x=top_prod["Prezzo_totale_vendita"],
+                    y=top_prod["Prodotto"],
+                    orientation="h",
+                    marker=dict(
+                        color=top_prod["Prezzo_totale_vendita"],
+                        colorscale=[[0, "#1e3a5f"], [1, "#4a9eff"]],
+                        showscale=False
+                    ),
+                    text=[f"€ {v:.2f}" for v in top_prod["Prezzo_totale_vendita"]],
+                    textposition="outside",
+                    textfont=dict(color="#ccc", size=11)
+                ))
+                fig_top.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#ccc"), height=300,
+                    margin=dict(l=0, r=60, t=10, b=0),
+                    xaxis=dict(showgrid=False, showticklabels=False),
+                    yaxis=dict(gridcolor="#1e3a5f"),
+                )
+                st.plotly_chart(fig_top, use_container_width=True)
+            else:
+                st.info("Nessun dato.")
+
+        # --- ELIA vs TOMMY GROUPED BAR ---
+        with col_right:
+            st.markdown('<div class="section-title">⚔️ Elia vs Tommy</div>', unsafe_allow_html=True)
+            if not analisi.empty:
+                fig_vs = go.Figure()
+                metriche = ["Ricavo totale (€)", "Costo totale (€)", "Guadagno totale (€)"]
+                colori = ["#4a9eff", "#ff6b6b"]
+                for i, row in analisi.iterrows():
+                    fig_vs.add_trace(go.Bar(
+                        name=str(row["Venditore"]),
+                        x=metriche,
+                        y=[row[m] for m in metriche],
+                        marker_color=colori[i % len(colori)],
+                        text=[f"€ {row[m]:.0f}" for m in metriche],
+                        textposition="outside",
+                        textfont=dict(color="#ccc", size=10)
+                    ))
+                fig_vs.update_layout(
+                    barmode="group",
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#ccc"), height=300,
+                    margin=dict(l=0, r=0, t=10, b=0),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                    xaxis=dict(gridcolor="#1e3a5f"),
+                    yaxis=dict(gridcolor="#1e3a5f", tickprefix="€ "),
+                )
+                st.plotly_chart(fig_vs, use_container_width=True)
+
+                king_row = analisi.loc[analisi["Plusvalenza media (%)"].idxmax()]
+                king = str(king_row["Venditore"]).capitalize()
+                gain = king_row["Plusvalenza media (%)"]
+                st.success(f"👑 King della vendita: **{king}** — plusvalenza media **{gain:.2f}%**")
+            else:
+                st.info("Nessun dato.")
+
+        # --- OBIETTIVI PERSONALI ---
+        st.markdown('<div class="section-title">🎯 I tuoi obiettivi personali</div>', unsafe_allow_html=True)
+        current_user = username.lower().strip()
+        if not vendite_df_all.empty:
+            mie_vendite = vendite_df_all[vendite_df_all["Venditore"].str.lower() == current_user].copy()
+            mie_vendite["_date"] = mie_vendite["_ts"].dt.date
+            tot_mio_oggi = ricavo_periodo(mie_vendite, oggi, oggi)
+            tot_mio_sett = ricavo_periodo(mie_vendite, settimana_start, oggi)
+        else:
+            tot_mio_oggi = tot_mio_sett = 0.0
+
+        obiettivo_g = 60
+        obiettivo_s = obiettivo_g * 7
+        prog_g = min(tot_mio_oggi / obiettivo_g, 1.0)
+        prog_s = min(tot_mio_sett / obiettivo_s, 1.0)
+
+        og1, og2 = st.columns(2)
+        with og1:
+            fig_g = go.Figure(go.Pie(
+                values=[prog_g, 1 - prog_g], hole=0.65,
+                marker_colors=["#00e676" if prog_g >= 1 else "#4a9eff", "#1e3a5f"],
+                textinfo="none"
+            ))
+            fig_g.update_layout(
+                title=dict(text=f"Oggi — {oggi.strftime('%d/%m')}", font=dict(color="#ccc")),
+                annotations=[dict(text=f"€{tot_mio_oggi:.0f}<br><span style='font-size:10px'>/ €{obiettivo_g}</span>",
+                                  x=0.5, y=0.5, font_size=18, showarrow=False, font_color="#fff")],
+                showlegend=False, height=280,
+                paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=50, b=0, l=0, r=0)
+            )
+            st.plotly_chart(fig_g, use_container_width=True)
+        with og2:
+            fig_s = go.Figure(go.Pie(
+                values=[prog_s, 1 - prog_s], hole=0.65,
+                marker_colors=["#00e676" if prog_s >= 1 else "#007bff", "#1e3a5f"],
+                textinfo="none"
+            ))
+            fig_s.update_layout(
+                title=dict(text="Ultimi 7 giorni", font=dict(color="#ccc")),
+                annotations=[dict(text=f"€{tot_mio_sett:.0f}<br><span style='font-size:10px'>/ €{obiettivo_s}</span>",
+                                  x=0.5, y=0.5, font_size=18, showarrow=False, font_color="#fff")],
+                showlegend=False, height=280,
+                paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=50, b=0, l=0, r=0)
+            )
+            st.plotly_chart(fig_s, use_container_width=True)
+
+        if prog_s >= 1:
+            st.balloons()
+            st.success("🏆 Obiettivo settimanale raggiunto!")
+        elif prog_g >= 1:
+            st.success("🔥 Obiettivo giornaliero raggiunto!")
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 💰 BILANCIO
+    # ──────────────────────────────────────────────────────────────────────────
+    elif menu == "💰 Bilancio":
+        st.subheader("💰 Bilancio")
+
+        ensure_headers(spese_ws, ["Descrizione", "Costo", "Chi", "Timestamp"])
+
+        prodotti_df = get_data(prodotti_ws)
+        vendite_df = get_data(vendite_ws)
+        spese_df = get_data(spese_ws)
+
+        b = calcola_bilancio(prodotti_df, vendite_df, spese_df)
+
+        # --- KPI metrics ---
+        st.divider()
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Spese Prodotti — Elia", f"€ {b['spesa_elia']:.2f}")
+            st.metric("Spese Extra — Elia", f"€ {b['spese_extra_elia']:.2f}")
+            st.metric("Entrate Elia", f"€ {b['entrate_elia']:.2f}")
+        with col2:
+            st.metric("Spese Prodotti — Tommy", f"€ {b['spesa_tommy']:.2f}")
+            st.metric("Spese Extra — Tommy", f"€ {b['spese_extra_tommy']:.2f}")
+            st.metric("Entrate Tommy", f"€ {b['entrate_tommy']:.2f}")
+
+        # --- Waterfall chart ---
+        st.markdown('<div class="section-title">📊 Waterfall: flusso economico</div>', unsafe_allow_html=True)
+        spese_tot = b["totale_spese"]
+        entrate_tot = b["totale_entrate"]
+        guadagno = entrate_tot - spese_tot
+
+        wf_x = ["Spese prodotti", "Spese extra", "Totale spese", "Entrate", "Risultato netto"]
+        spese_prod = b["spesa_elia"] + b["spesa_tommy"]
+        spese_extra = b["spese_extra_elia"] + b["spese_extra_tommy"]
+        wf_y = [-spese_prod, -spese_extra, -spese_tot, entrate_tot, guadagno]
+        wf_measure = ["relative", "relative", "total", "relative", "total"]
+        wf_colors = ["#ff5252", "#ff7043", "#b71c1c", "#4a9eff", "#00e676" if guadagno >= 0 else "#ff5252"]
+
+        fig_wf = go.Figure(go.Waterfall(
+            x=wf_x,
+            y=[spese_prod, spese_extra, None, entrate_tot, None],
+            measure=["relative", "relative", "total", "relative", "total"],
+            text=[f"€ {abs(v):.2f}" for v in [spese_prod, spese_extra, spese_tot, entrate_tot, guadagno]],
+            textposition="outside",
+            decreasing=dict(marker=dict(color="#ff5252")),
+            increasing=dict(marker=dict(color="#4a9eff")),
+            totals=dict(marker=dict(color=["#b71c1c", "#00e676" if guadagno >= 0 else "#ff5252"])),
+            connector=dict(line=dict(color="#333", width=1)),
+        ))
+        fig_wf.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#ccc"), height=350,
+            margin=dict(l=0, r=0, t=20, b=0),
+            yaxis=dict(gridcolor="#1e3a5f", tickprefix="€ "),
+            xaxis=dict(gridcolor="#1e3a5f"),
+        )
+        st.plotly_chart(fig_wf, use_container_width=True)
+
+        # --- Stato pareggio ---
+        st.divider()
+        col3, col4 = st.columns(2)
+        with col3:
+            st.metric("Totale Spese", f"€ {b['totale_spese']:.2f}")
+        with col4:
+            st.metric("Totale Entrate", f"€ {b['totale_entrate']:.2f}")
+
+        st.divider()
+        totale_spese = b["totale_spese"]
+        totale_entrate = b["totale_entrate"]
+        pareggio = b["pareggio"]
+        guadagno_netto = totale_entrate - totale_spese
+        progresso = min((totale_entrate / totale_spese) if totale_spese > 0 else 0, 1.0)
+
+        saldo_elia = b["saldo_elia"]
+        if saldo_elia > 0:
+            st.success(f"💸 Tommy deve a Elia: **€ {saldo_elia:.2f}**")
+        elif saldo_elia < 0:
+            st.error(f"💸 Elia deve a Tommy: **€ {abs(saldo_elia):.2f}**")
+        else:
+            st.info("✅ I conti sono perfettamente in pari!")
+        st.caption(f"Saldo Elia: € {saldo_elia:.2f}  |  Saldo Tommy: € {b['saldo_tommy']:.2f}")
+
+        if not "pareggio_festeggiato" in st.session_state:
+            st.session_state.pareggio_festeggiato = False
+
+        if totale_entrate < totale_spese:
+            st.markdown("### 🎯 Mancano al pareggio")
+            st.metric("Importo mancante", f"€ {pareggio:.2f}")
+            st.progress(progresso)
+            st.markdown(f"**Avanzamento:** {progresso*100:.1f}% delle spese coperte")
+            st.session_state.pareggio_festeggiato = False
+        elif abs(totale_entrate - totale_spese) < 1:
+            st.markdown("### ✅ Pareggio raggiunto!")
+            st.progress(1.0)
+        else:
+            st.markdown("### 💰 Guadagno netto")
+            st.metric("Profitto totale", f"€ {guadagno_netto:.2f}")
+            st.progress(1.0)
+            st.markdown("Hai superato il pareggio e stai generando **profitto netto!** 🥳")
+            if not st.session_state.pareggio_festeggiato:
+                st.balloons()
+                st.session_state.pareggio_festeggiato = True
+
+        # --- Inserisci spesa extra ---
+        st.markdown("---")
+        st.markdown("### ➕ Inserisci spesa extra")
+        c1, c2, c3 = st.columns([2, 1, 1])
+        with c1:
+            descr = st.text_input("Descrizione", placeholder="Es. Sponsorizzata Instagram")
+        with c2:
+            costo_input = st.text_input("Costo (€)", placeholder="es. 5,00")
+        with c3:
+            chi = st.selectbox("Chi paga", ["Elia", "Tommy"])
+
+        if st.button("Inserisci spesa", type="primary", use_container_width=True):
+            if descr and costo_input:
+                try:
+                    costo_float = float(costo_input.replace(",", ".").strip())
+                    costo_format = f"€ {costo_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    add_row(spese_ws, [descr, costo_format, chi, timestamp])
+                    st.success("✅ Spesa inserita correttamente!")
+                    st.rerun()
+                except ValueError:
+                    st.warning("⚠️ Inserisci un numero valido.")
+            else:
+                st.warning("⚠️ Inserisci descrizione e costo.")
+
+        # --- Storico spese ---
+        st.markdown("### 📜 Storico spese")
+        spese_df = get_data(spese_ws)
+        if spese_df.empty:
+            st.info("Nessuna spesa registrata.")
+        else:
+            spese_df["Costo"] = spese_df["Costo"].apply(_clean_price).round(2)
+            _ts = pd.to_datetime(spese_df["Timestamp"].astype(str).str.strip(), format="%d/%m/%Y %H:%M", errors="coerce")
+            spese_df = spese_df.assign(_ts=_ts).sort_values("_ts", ascending=False).drop(columns=["_ts"])
+            spese_df = spese_df.rename(columns={"Chi": "Pagata da"})
+            spese_df["Costo (€)"] = spese_df["Costo"].map(lambda x: f"€ {x:.2f}")
+            st.dataframe(spese_df[["Timestamp", "Descrizione", "Pagata da", "Costo (€)"]], use_container_width=True, hide_index=True)
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 🧾 VENDITE
+    # ──────────────────────────────────────────────────────────────────────────
+    elif menu == "🧾 Vendite":
+        st.subheader("🧾 Registra nuovo ordine")
+
+        prodotti_df = get_data(prodotti_ws)
+        nomi_prodotti = sorted(prodotti_df["Nome"].unique().tolist())
+
+        prodotti_scelti = st.multiselect("Prodotti venduti", nomi_prodotti)
+        venditore = st.selectbox("Venditore", ["Elia", "Tommy"])
+        prezzo_totale = st.number_input("Prezzo totale vendita (€)", min_value=0.0, step=0.5)
+
+        quantita_vendute = {}
+        for p in prodotti_scelti:
+            quantita_vendute[p] = st.number_input(f"Quantità per {p}", min_value=1, step=1, key=p)
+
+        if st.button("Registra", type="primary"):
+            if prodotti_scelti and prezzo_totale > 0:
+                vendite_generate, _ = registra_vendita_multipla(
+                    prodotti_df, quantita_vendute, prezzo_totale, venditore
+                )
+                for v in vendite_generate:
+                    add_row(vendite_ws, v)
+
+                from data_utils import send_telegram_message
+                prodotti_str = ", ".join(prodotti_scelti)
+                msg = (
+                    f"💸 <b>Nuova vendita registrata!</b>\n"
+                    f"👤 Venditore: {venditore}\n"
+                    f"🛍️ Prodotti: {prodotti_str}\n"
+                    f"💶 Totale: € {prezzo_totale:.2f}"
+                )
+                send_telegram_message(msg)
+                st.success(f"✅ Vendita registrata ({len(vendite_generate)} prodotti)")
+                st.rerun()
+            else:
+                st.warning("⚠️ Seleziona almeno un prodotto e inserisci un prezzo totale.")
+
+        st.markdown("---")
+        st.markdown("### 📜 Ordini precedenti")
+
+        vendite_storico = get_data(vendite_ws)
+        if vendite_storico.empty:
+            st.info("Nessun ordine registrato.")
+        else:
+            vendite_storico = vendite_storico.copy()
+            vendite_storico["Venditore"] = vendite_storico["Venditore"].astype(str).str.strip().str.capitalize()
+            vendite_storico["Timestamp"] = vendite_storico.get("Timestamp", "").astype(str).str.strip()
+            vendite_storico["Prezzo_totale_vendita"] = vendite_storico["Prezzo_totale_vendita"].apply(_clean_price)
+            vendite_storico["Quantita"] = pd.to_numeric(vendite_storico["Quantita"], errors="coerce").fillna(0).astype(int)
+
+            ordini = (
+                vendite_storico
+                .groupby(["Venditore", "Timestamp"], as_index=False)
+                .agg(
+                    Articoli=("Prodotto", "count"),
+                    Pezzi=("Quantita", "sum"),
+                    Totale=("Prezzo_totale_vendita", "sum")
+                )
+            )
+            ordini["_ts"] = pd.to_datetime(ordini["Timestamp"], format="%d/%m/%Y %H:%M", errors="coerce")
+            ordini = ordini.sort_values("_ts", ascending=False).reset_index(drop=True)
+            idx_valid = ordini.dropna(subset=["_ts"]).sort_values("_ts", ascending=True).index
+            ordini.loc[idx_valid, "Ordine #"] = range(1, len(idx_valid) + 1)
+            ordini = ordini.sort_values("_ts", ascending=False).reset_index(drop=True)
+            ordini["Ordine #"] = ordini["Ordine #"].astype(int)
+            ordini["Totale (€)"] = ordini["Totale"].round(2)
+
+            st.dataframe(ordini[["Ordine #", "Venditore", "Timestamp", "Totale (€)"]], use_container_width=True, hide_index=True)
+
+            with st.expander("Mostra dettaglio prodotti per ogni ordine"):
+                for _, row in ordini.iterrows():
+                    mask = (vendite_storico["Venditore"] == row["Venditore"]) & (vendite_storico["Timestamp"] == row["Timestamp"])
+                    dettaglio = vendite_storico.loc[mask, ["Prodotto", "Quantita", "Prezzo_totale_vendita"]].copy()
+                    dettaglio["Prezzo_totale_vendita"] = dettaglio["Prezzo_totale_vendita"].round(2)
+                    st.write(f"**#{row['Ordine #']}** : {row['Venditore']} – {row['Timestamp']} – Totale: € {row['Totale (€)']:.2f}")
+                    st.dataframe(dettaglio.rename(columns={"Prezzo_totale_vendita": "Quota ricavo (€)"}), use_container_width=True, hide_index=True)
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 📦 INVENTARIO
+    # ──────────────────────────────────────────────────────────────────────────
+    elif menu == "📦 Inventario":
         st.subheader("📦 Inventario reale aggregato")
 
         prodotti_df = get_data(prodotti_ws)
         vendite_df = get_data(vendite_ws)
         inventario_df = inventario_aggregato(prodotti_df, vendite_df)
-
-        # 🔎 mostra solo prodotti con quantità residua > 0
         inventario_df = inventario_df[inventario_df["Quantità residua"].fillna(0) > 0].copy()
 
+        # --- Alert stock basso ---
+        soglia_bassa = 3
+        low_stock = inventario_df[inventario_df["Quantità residua"] <= soglia_bassa]
+        if not low_stock.empty:
+            st.markdown(f"**⚠️ {len(low_stock)} prodott{'o' if len(low_stock)==1 else 'i'} con stock basso (≤ {soglia_bassa} pz):**")
+            for _, r in low_stock.iterrows():
+                st.markdown(f'<div class="alert-low-stock">🔴 <b>{r["Prodotto"]}</b> — rimasti <b>{int(r["Quantità residua"])}</b> pezzi</div>', unsafe_allow_html=True)
+            st.markdown("")
+
+        # --- KPI inventario ---
+        if not inventario_df.empty and not prodotti_df.empty:
+            prodotti_df_c = prodotti_df.copy()
+            prodotti_df_c["Prezzo_unitario"] = prodotti_df_c["Prezzo_unitario"].apply(_clean_price)
+            prodotti_df_c["Quantita"] = pd.to_numeric(prodotti_df_c["Quantita"], errors="coerce").fillna(0)
+
+            valore_acquisto = (prodotti_df_c["Prezzo_unitario"] * prodotti_df_c["Quantita"]).sum()
+            valore_residuo = (inventario_df["Costo medio unitario(€)"] * inventario_df["Quantità residua"]).sum()
+            pz_totali = inventario_df["Quantità residua"].sum()
+
+            k1, k2, k3 = st.columns(3)
+            k1.metric("💰 Valore acquistato", f"€ {valore_acquisto:.2f}")
+            k2.metric("📦 Valore residuo in magazzino", f"€ {valore_residuo:.2f}")
+            k3.metric("🔢 Pezzi in magazzino", int(pz_totali))
+
+        # --- Tabella ---
         st.dataframe(inventario_df, use_container_width=True, hide_index=True)
         st.caption("⚙️ Costo medio e prezzo medio calcolati automaticamente in base alle vendite e agli acquisti.")
 
+        # --- Grafico valore inventario per prodotto ---
+        if not inventario_df.empty:
+            st.markdown('<div class="section-title">📊 Valore residuo per prodotto (€)</div>', unsafe_allow_html=True)
+            inv_plot = inventario_df.copy()
+            inv_plot["Valore residuo (€)"] = (inv_plot["Costo medio unitario(€)"] * inv_plot["Quantità residua"]).round(2)
+            inv_plot = inv_plot.sort_values("Valore residuo (€)", ascending=True)
+
+            fig_inv = go.Figure(go.Bar(
+                x=inv_plot["Valore residuo (€)"],
+                y=inv_plot["Prodotto"],
+                orientation="h",
+                marker=dict(
+                    color=inv_plot["Valore residuo (€)"],
+                    colorscale=[[0, "#1e3a5f"], [1, "#4a9eff"]],
+                    showscale=False
+                ),
+                text=[f"€ {v:.2f}" for v in inv_plot["Valore residuo (€)"]],
+                textposition="outside",
+                textfont=dict(color="#ccc", size=11)
+            ))
+            fig_inv.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#ccc"), height=max(250, len(inv_plot) * 35),
+                margin=dict(l=0, r=60, t=10, b=0),
+                xaxis=dict(showgrid=False, showticklabels=False),
+                yaxis=dict(gridcolor="#1e3a5f"),
+            )
+            st.plotly_chart(fig_inv, use_container_width=True)
+
+        # --- Aggiungi prodotto ---
         st.markdown("### ➕ Aggiungi nuovo prodotto")
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -91,428 +646,11 @@ if authentication_status:
         if st.button("Aggiungi prodotto", type="primary", use_container_width=True):
             if nome and prezzo_input:
                 try:
-                    # normalizza prezzo
-                    prezzo_norm = prezzo_input.replace(",", ".").strip()
-                    prezzo_float = float(prezzo_norm)
+                    prezzo_float = float(prezzo_input.replace(",", ".").strip())
                     prezzo_format = f"€ {prezzo_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-                    # intestazioni attese: Nome, Prezzo_unitario, Quantita, Comprato_da, Timestamp
                     timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
                     add_row(prodotti_ws, [nome, prezzo_format, int(quantita), comprato_da, timestamp])
-
-                    st.success(f"✅ Prodotto **{nome}** aggiunto correttamente con prezzo {prezzo_format}!")
+                    st.success(f"✅ Prodotto **{nome}** aggiunto con prezzo {prezzo_format}!")
                     st.rerun()
                 except ValueError:
-                    st.warning("⚠️ Inserisci un numero valido per il prezzo (es. 4,50 o 10,00).")
-
-    # -------------------------------
-    # 🧾 TAB 2: VENDITE
-    # -------------------------------
-    
-    elif menu == "🧾 Vendite":
-        st.subheader("🧾 Registra nuovo ordine")
-
-        prodotti_df = get_data(prodotti_ws)
-        nomi_prodotti = sorted(prodotti_df["Nome"].unique().tolist())
-
-        # Selezione multipla
-        prodotti_scelti = st.multiselect("Prodotti venduti", nomi_prodotti)
-        venditore = st.selectbox("Venditore", ["Elia", "Tommy"])
-        prezzo_totale = st.number_input("Prezzo totale vendita (€)", min_value=0.0, step=0.5)
-
-        quantita_vendute = {}
-        for p in prodotti_scelti:
-            quantita_vendute[p] = st.number_input(f"Quantità per {p}", min_value=1, step=1, key=p)
-
-        if st.button("Registra", type="primary"):
-            if prodotti_scelti and prezzo_totale > 0:
-                vendite_generate, inventario_aggiornato = registra_vendita_multipla(
-                    prodotti_df, quantita_vendute, prezzo_totale, venditore
-                )
-                
-            
-                for v in vendite_generate:
-                    add_row(vendite_ws, v)
-
-                # 🔔 Invia notifica Telegram
-                from data_utils import registra_vendita_multipla, send_telegram_message
-                prodotti_str = ", ".join(prodotti_scelti)
-                msg = (
-                    f"💸 <b>Nuova vendita registrata!</b>\n"
-                    f"👤 Venditore: {venditore}\n"
-                    f"🛍️ Prodotti: {prodotti_str}\n"
-                    f"💶 Totale: € {prezzo_totale:.2f}"
-                )
-                send_telegram_message(msg)
-
-
-                
-                st.success(f"✅ Vendita registrata ({len(vendite_generate)} prodotti)")
-                st.rerun()
-            else:
-                st.warning("⚠️ Seleziona almeno un prodotto e inserisci un prezzo totale.")
-        
-        # -------------------------------
-        # 📜 Storico ordini (raggruppati)
-        # -------------------------------
-        st.markdown("---")
-        st.markdown("### 📜 Ordini precedenti")
-
-        vendite_storico = get_data(vendite_ws)
-
-        if vendite_storico.empty:
-            st.info("Nessun ordine registrato.")
-        else:
-            # Pulizia base
-            vendite_storico = vendite_storico.copy()
-            vendite_storico["Venditore"] = (
-                vendite_storico["Venditore"].astype(str).str.strip().str.capitalize()
-            )
-            vendite_storico["Timestamp"] = vendite_storico.get("Timestamp", "").astype(str).str.strip()
-            vendite_storico["Prezzo_totale_vendita"] = vendite_storico["Prezzo_totale_vendita"].apply(_clean_price)
-            vendite_storico["Quantita"] = pd.to_numeric(vendite_storico["Quantita"], errors="coerce").fillna(0).astype(int)
-
-            # Raggruppa per ordine: (Venditore, Timestamp)
-            ordini = (
-                vendite_storico
-                .groupby(["Venditore", "Timestamp"], as_index=False)
-                .agg(
-                    Articoli=("Prodotto", "count"),             # quante righe/prodotti ha l'ordine
-                    Pezzi=("Quantita", "sum"),                  # somma quantità
-                    Totale=("Prezzo_totale_vendita", "sum")     # somma quote ricavo = totale ordine
-                )
-            )
-
-            # Ordina per data (più recente in alto) e numerazione Ordine #1, #2, ...
-            ordini["_ts"] = pd.to_datetime(ordini["Timestamp"], format="%d/%m/%Y %H:%M", errors="coerce")
-            ordini = ordini.sort_values("_ts", ascending=False).reset_index(drop=True)
-            # parsing del timestamp
-            ordini["_ts"] = pd.to_datetime(
-                ordini["Timestamp"], format="%d/%m/%Y %H:%M", errors="coerce")
-
-            # 1) NUMERAZIONE: il più vecchio è Ordine #1
-            idx_valid = ordini.dropna(subset=["_ts"]).sort_values("_ts", ascending=True).index
-            ordini.loc[idx_valid, "Ordine #"] = range(1, len(idx_valid) + 1)
-
-            # 2) VISUALIZZAZIONE: metti i più recenti in alto
-            ordini = ordini.sort_values("_ts", ascending=False).reset_index(drop=True)
-
-            # formato colonne
-            ordini["Ordine #"] = ordini["Ordine #"].astype(int)
-            ordini["Totale (€)"] = ordini["Totale"].round(2)
-
-
-            # Se vuoi mostrare solo le info principali richieste:
-            cols = ["Ordine #", "Venditore", "Timestamp", "Totale (€)"]
-            st.dataframe(ordini[cols], use_container_width=True, hide_index=True)
-
-            # (Opzionale) Expanders con il dettaglio dei prodotti per ogni ordine
-            with st.expander("Mostra dettaglio prodotti per ogni ordine"):
-                for _, row in ordini.iterrows():
-                    mask = (vendite_storico["Venditore"] == row["Venditore"]) & (vendite_storico["Timestamp"] == row["Timestamp"])
-                    dettaglio = vendite_storico.loc[mask, ["Prodotto", "Quantita", "Prezzo_totale_vendita"]].copy()
-                    dettaglio["Prezzo_totale_vendita"] = dettaglio["Prezzo_totale_vendita"].round(2)
-                    st.write(f"**#{row['Ordine #']}** : {row['Venditore']} – {row['Timestamp']} – Totale: € {row['Totale (€)']:.2f}")
-                    st.dataframe(dettaglio.rename(columns={"Prezzo_totale_vendita": "Quota ricavo (€)"}), use_container_width=True, hide_index=True)
-
-
-    # -------------------------------
-    # 💰 TAB 3: BILANCIO
-    # -------------------------------
-    elif menu == "💰 Bilancio":
-        st.subheader("💰 Bilancio")
-
-        ensure_headers(spese_ws, ["Descrizione", "Costo", "Chi", "Timestamp"])
-
-        prodotti_df = get_data(prodotti_ws)
-        vendite_df = get_data(vendite_ws)
-        spese_df = get_data(spese_ws)
-
-        b = calcola_bilancio(prodotti_df, vendite_df, spese_df)
-
-        st.divider()
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Spese Prodotti - Elia", f"€ {b['spesa_elia']:.2f}")
-            st.metric("Spese Extra - Elia", f"€ {b['spese_extra_elia']:.2f}")
-            st.metric("Entrate Elia", f"€ {b['entrate_elia']:.2f}")
-        with col2:
-            st.metric("Spese Prodotti - Tommy", f"€ {b['spesa_tommy']:.2f}")
-            st.metric("Spese Extra - Tommy", f"€ {b['spese_extra_tommy']:.2f}")
-            st.metric("Entrate Tommy", f"€ {b['entrate_tommy']:.2f}")
-
-        st.divider()
-        col3, col4 = st.columns(2)
-        with col3:
-            st.metric("Totale Spese (prodotti + extra)", f"€ {b['totale_spese']:.2f}")
-        with col4:
-            st.metric("Totale Entrate", f"€ {b['totale_entrate']:.2f}")
-
-        st.divider()
-
-        saldo_elia = b["saldo_elia"]
-        saldo_tommy = b["saldo_tommy"]
-
-        if saldo_elia > 0:
-            st.success(f"💸 Tommy deve a Elia: **€ {saldo_elia:.2f}**")
-        elif saldo_elia < 0:
-            st.error(f"💸 Elia deve a Tommy: **€ {abs(saldo_elia):.2f}**")
-        else:
-            st.info("✅ I conti sono perfettamente in pari!")
-
-        st.caption(f"Saldo Elia: € {saldo_elia:.2f}  |  Saldo Tommy: € {saldo_tommy:.2f}")
-
-        # --- Avanzamento verso il pareggio ---
-        st.divider()
-        totale_spese = b["totale_spese"]
-        totale_entrate = b["totale_entrate"]
-        pareggio = b["pareggio"]
-        guadagno_netto = totale_entrate - totale_spese
-
-        progresso = min((totale_entrate / totale_spese) if totale_spese > 0 else 0, 1.0)
-
-        if "pareggio_festeggiato" not in st.session_state:
-            st.session_state.pareggio_festeggiato = False
-
-        if totale_entrate < totale_spese:
-            st.markdown("### 🎯 Mancano al pareggio")
-            st.metric("Importo mancante", f"€ {pareggio:.2f}")
-            st.progress(progresso)
-            st.markdown(f"**Avanzamento:** {progresso*100:.1f}% delle spese coperte")
-            st.session_state.pareggio_festeggiato = False
-        elif abs(totale_entrate - totale_spese) < 1:
-            st.markdown("### ✅ Pareggio raggiunto!")
-            st.progress(1.0)
-            st.session_state.pareggio_festeggiato = False
-        else:
-            st.markdown("""
-                <div style="
-                    background-color: #E8F5E9;
-                    padding: 1rem;
-                    border-radius: 10px;
-                    border: 1px solid #C8E6C9;
-                    text-align: center;">
-                    <h3 style="color:#1B5E20;">💰 Guadagno netto</h3>
-                </div>
-            """, unsafe_allow_html=True)
-            st.metric("Profitto totale", f"€ {guadagno_netto:.2f}")
-            st.progress(1.0)
-            st.markdown("Hai superato il pareggio e stai generando **profitto netto!** 🥳")
-            if not st.session_state.pareggio_festeggiato:
-                st.balloons()
-                st.session_state.pareggio_festeggiato = True
-
-        # -------------------------------
-        # ➕ Inserisci spesa extra
-        # -------------------------------
-        st.markdown("---")
-        st.markdown("### ➕ Inserisci spesa extra")
-
-        c1, c2, c3 = st.columns([2, 1, 1])
-        with c1:
-            descr = st.text_input("Descrizione", placeholder="Es. Sponsorizzata Instagram")
-        with c2:
-            costo_input = st.text_input("Costo (€)", placeholder="es. 5,00")
-        with c3:
-            chi = st.selectbox("Chi paga", ["Elia", "Tommy"])
-
-        if st.button("Inserisci spesa", type="primary", use_container_width=True):
-            if descr and costo_input:
-                try:
-                    costo_norm = costo_input.replace(",", ".").strip()
-                    costo_float = float(costo_norm)
-                    costo_format = f"€ {costo_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
-                    add_row(spese_ws, [descr, costo_format, chi, timestamp])
-                    st.success("✅ Spesa inserita correttamente!")
-                    st.rerun()
-                except ValueError:
-                    st.warning("⚠️ Inserisci un numero valido per il costo (es. 4,50 o 10,00).")
-            else:
-                st.warning("⚠️ Inserisci descrizione e costo.")
-
-        # -------------------------------
-        # 📜 Storico spese
-        # -------------------------------
-        st.markdown("### 📜 Storico spese")
-        spese_df = get_data(spese_ws)  # ricarica
-        if spese_df.empty:
-            st.info("Nessuna spesa registrata.")
-        else:
-            # pulizia e ordinamento
-            spese_df["Costo"] = spese_df["Costo"].apply(_clean_price).round(2)
-            spese_df["Timestamp"] = spese_df.get("Timestamp", "").astype(str).str.strip()
-            _ts = pd.to_datetime(spese_df["Timestamp"], format="%d/%m/%Y %H:%M", errors="coerce")
-            spese_df = spese_df.assign(_ts=_ts).sort_values("_ts", ascending=False).drop(columns=["_ts"])
-            spese_df = spese_df.rename(columns={"Chi": "Pagata da"})
-            spese_df["Costo (€)"] = spese_df["Costo"].map(lambda x: f"€ {x:.2f}")
-            st.dataframe(spese_df[["Timestamp", "Descrizione", "Pagata da", "Costo (€)"]], use_container_width=True, hide_index=True)
-
-
-
-    # -------------------------------
-    # 📈 TAB 4: KING DELLA VENDITA
-    # -------------------------------
-    elif menu == "📈 Dashboard Venditore":
-        import plotly.graph_objects as go
-        from datetime import datetime, timedelta
-        import pytz
-       
-        prodotti_df = get_data(prodotti_ws)
-        vendite_df_all = get_data(vendite_ws)
-        spese_df_all = get_data(spese_ws)
-        # ➜ normalizza vendite_df_all prima…
-        vendite_df_all["Venditore"] = vendite_df_all["Venditore"].astype(str).str.strip().str.lower()
-
-        # calcola UNA volta, con le spese
-        analisi = analisi_vendite(prodotti_df, vendite_df_all, spese_df_all)
-            
-
-        # Filtra le vendite dell' utente loggato
-
-        current_user = username.lower().strip()
-        vendite_df_all["Venditore"] = vendite_df_all["Venditore"].astype(str).str.strip().str.lower()
-        vendite_df = vendite_df_all[vendite_df_all["Venditore"] == current_user]
-
-        st.markdown("## 📊 Dashboard venditore")
-        st.caption("🎯 Obiettivi personali di vendita – monitoraggio giornaliero e settimanale")
-
-
-
-        if "Timestamp" in vendite_df.columns:
-            # Rimuove spazi e converte tutto in datetime (senza crash)
-            vendite_df["Timestamp"] = (
-                pd.to_datetime(vendite_df["Timestamp"].astype(str).str.strip(), 
-                            format="%d/%m/%Y %H:%M", 
-                            errors="coerce")
-            )
-
-            # Applica .dt solo se la conversione ha funzionato
-            if pd.api.types.is_datetime64_any_dtype(vendite_df["Timestamp"]):
-                vendite_df["Timestamp"] = vendite_df["Timestamp"].dt.tz_localize(None)
-            else:
-                st.warning("⚠️ I timestamp non sono stati riconosciuti come datetime.")
-                st.write(vendite_df["Timestamp"].head())
-        else:
-            vendite_df["Timestamp"] = pd.NaT
-
-        italy_tz = ZoneInfo("Europe/Rome")
-        oggi = datetime.now(italy_tz).date()
-        settimana_inizio = oggi - timedelta(days=6)
-        oggi_dt = pd.to_datetime(oggi)
-        settimana_inizio_dt = pd.to_datetime(settimana_inizio)
-
-
-
-        vendite_df["Prezzo_totale_vendita"] = vendite_df["Prezzo_totale_vendita"].apply(_clean_price)
-        
-        vendite_giornaliere = vendite_df[vendite_df["Timestamp"].dt.normalize() == oggi_dt]
-        vendite_settimanali = vendite_df[
-            (vendite_df["Timestamp"].dt.normalize() >= settimana_inizio_dt)
-            & (vendite_df["Timestamp"].dt.normalize() <= oggi_dt)
-        ]
-
-        totale_giorno = vendite_giornaliere["Prezzo_totale_vendita"].sum()
-        totale_settimana = vendite_settimanali["Prezzo_totale_vendita"].sum()
-
-        # --- Obiettivi ---
-        obiettivo_giorno = 60
-        obiettivo_settimana = obiettivo_giorno * 7
-        progresso_giorno = min(totale_giorno / obiettivo_giorno, 1)
-        progresso_settimana = min(totale_settimana / obiettivo_settimana, 1)
-
-        # --- GRAFICI ---
-        col1, col2 = st.columns(2)
-        with col1:
-            fig_giorno = go.Figure(go.Pie(
-                values=[progresso_giorno, 1 - progresso_giorno],
-                hole=0.6, marker_colors=["#00B894", "#E0E0E0"], textinfo="none"))
-            fig_giorno.update_layout(title=f"🕒 Oggi ({oggi.strftime('%d/%m/%Y')})",
-                                    annotations=[dict(text=f"{progresso_giorno*100:.0f}%", x=0.5, y=0.5, font_size=22, showarrow=False)],
-                                    showlegend=False, height=400)
-            st.plotly_chart(fig_giorno, use_container_width=True)
-        with col2:
-            fig_settimana = go.Figure(go.Pie(
-                values=[progresso_settimana, 1 - progresso_settimana],
-                hole=0.6, marker_colors=["#007A87", "#E0E0E0"], textinfo="none"))
-            fig_settimana.update_layout(title="📅 Ultimi 7 giorni",
-                                        annotations=[dict(text=f"{progresso_settimana*100:.0f}%", x=0.5, y=0.5, font_size=22, showarrow=False)],
-                                        showlegend=False, height=400)
-            st.plotly_chart(fig_settimana, use_container_width=True)
-
-        # --- INFO ---
-        st.markdown("---")
-        st.markdown(f"**Totale vendite oggi:** € {totale_giorno:.2f} / € {obiettivo_giorno:.2f}")
-        st.markdown(f"**Totale vendite settimana:** € {totale_settimana:.2f} / € {obiettivo_settimana:.2f}")
-
-        if progresso_giorno >= 1 and progresso_settimana < 1:
-            st.success("🔥 Hai raggiunto l'obiettivo giornaliero, continua così per la settimana!")
-        elif progresso_settimana >= 1:
-            st.balloons()
-            st.success("🏆 Complimenti! Hai raggiunto l'obiettivo settimanale!")        # --- Copertura costi prodotti: costo venduto / costo acquistato ---
-        st.markdown("---")
-        st.markdown("#### 🔄 Percentuale di prododotti venduti", )
-
-        # 1) Costi totali acquistati (dal foglio prodotti)
-        dfp = prodotti_df.copy()
-        dfp["Prezzo_unitario"] = dfp["Prezzo_unitario"].apply(_clean_price)
-        dfp["Quantita"] = pd.to_numeric(dfp["Quantita"], errors="coerce").fillna(0)
-        costo_tot_acquisti = (dfp["Prezzo_unitario"] * dfp["Quantita"]).sum()
-
-        # 2) Costo totale dei prodotti venduti (usando costo medio ponderato)
-        dfp_cost = dfp.rename(columns={"Nome": "Prodotto"}) if "Nome" in dfp.columns else dfp
-        dfp_cost["Prodotto"] = dfp_cost["Prodotto"].astype(str).str.strip().str.lower()
-
-        costi_medi = (
-            dfp_cost.groupby("Prodotto").apply(
-                lambda x: (x["Prezzo_unitario"] * x["Quantita"]).sum() / x["Quantita"].sum()
-                if x["Quantita"].sum() > 0 else 0.0
-            ).reset_index(name="Costo_medio_unitario")
-        )
-
-        dfv_all = vendite_df_all.copy()
-        dfv_all["Prodotto"] = dfv_all["Prodotto"].astype(str).str.strip().str.lower()
-        dfv_all["Quantita"] = pd.to_numeric(dfv_all["Quantita"], errors="coerce").fillna(0)
-
-        m = dfv_all.merge(costi_medi, on="Prodotto", how="left")
-        costo_tot_venduto = (m["Costo_medio_unitario"].fillna(0) * m["Quantita"]).sum()
-
-        # 3) Progress bar
-        progresso = float(costo_tot_venduto) / float(costo_tot_acquisti) if costo_tot_acquisti > 0 else 0.0
-        progresso = max(0.0, min(progresso, 1.0))  # clamp 0..1
-
-        st.progress(progresso)
-        st.caption(
-            f"Costo prodotti venduti: € {costo_tot_venduto:.2f} / Costo totale prodotti: € {costo_tot_acquisti:.2f} "
-            f"({progresso*100:.1f}%)"
-        )
-
-        
-
-        # --- SEZIONE ANALISI COMPLETA ---
-        st.markdown("---")
-        st.markdown("### 🧮 Confronto vendite tra Elia e Tommy")
-
-        # ⚠️ NON ricreare analisi senza le spese: usa quella calcolata sopra
-        # analisi = analisi_vendite(prodotti_df, vendite_df_all, spese_df_all)
-
-        if analisi.empty:
-            st.info("📊 Nessuna vendita registrata al momento.")
-        else:
-            st.dataframe(
-                analisi.style.format({
-                    "Ricavo totale (€)": "€ {:.2f}",
-                    "Costo totale (€)": "€ {:.2f}",
-                    "Spese extra (€)": "€ {:.2f}",
-                    "Guadagno totale (€)": "€ {:.2f}",
-                    "Plusvalenza media (%)": "{:.1f}%"
-                }),
-                use_container_width=True
-            )
-
-            # Identifica il "King della vendita"
-            king_row = analisi.loc[analisi["Plusvalenza media (%)"].idxmax()]
-            king = str(king_row["Venditore"]).capitalize()
-            gain = king_row["Plusvalenza media (%)"]
-            st.success(f"👑 King della vendita: **{king}** con una plusvalenza media del **{gain:.2f}%**")
-
+                    st.warning("⚠️ Inserisci un numero valido per il prezzo.")
